@@ -45,43 +45,54 @@ async function renderCards() {
     .map((key) => ({ key, count: storage[key] || 0 }))
     .filter((c) => c.count > 0);
 
-  const frag = document.createDocumentFragment();
-  for (const { key, count } of cards) {
-    const { name, setCode, number } = cardFromKey(key);
-    const card = document.createElement("div");
-    card.className = "owned-card";
-    card.dataset.key = key;
-
-    const controls = document.createElement("div");
-    controls.className = "card-controls";
-    const minus = document.createElement("button");
-    minus.className = "small";
-    minus.textContent = "−";
-    minus.dataset.delta = "-1";
-    const countEl = document.createElement("span");
-    countEl.className = "card-count";
-    countEl.textContent = count;
-    const plus = document.createElement("button");
-    plus.className = "small";
-    plus.textContent = "+";
-    plus.dataset.delta = "1";
-    controls.appendChild(minus);
-    controls.appendChild(countEl);
-    controls.appendChild(plus);
-
-    const img = await createCardImg({ name, setCode, number });
-
-    const label = document.createElement("div");
-    label.className = "label";
-    label.textContent = `${name} ${setCode}`;
-
-    card.appendChild(controls);
-    card.appendChild(img);
-    card.appendChild(label);
-    frag.appendChild(card);
+  // Show a loading indicator while images resolve on the first pass.
+  if (cardsGrid.dataset.loaded !== "1") {
+    cardsGrid.innerHTML = '<div class="loading">Loading your cards&hellip;</div>';
   }
+
+  // Resolve every card image in parallel so a slow card doesn't block the rest.
+  const ready = await Promise.all(
+    cards.map(async ({ key, count }) => {
+      const { name, setCode, number } = cardFromKey(key);
+      const card = document.createElement("div");
+      card.className = "owned-card";
+      card.dataset.key = key;
+
+      const controls = document.createElement("div");
+      controls.className = "card-controls";
+      const minus = document.createElement("button");
+      minus.className = "small";
+      minus.textContent = "−";
+      minus.dataset.delta = "-1";
+      const countEl = document.createElement("span");
+      countEl.className = "card-count";
+      countEl.textContent = count;
+      const plus = document.createElement("button");
+      plus.className = "small";
+      plus.textContent = "+";
+      plus.dataset.delta = "1";
+      controls.appendChild(minus);
+      controls.appendChild(countEl);
+      controls.appendChild(plus);
+
+      const img = await createCardImg({ name, setCode, number });
+
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = `${name} ${setCode}`;
+
+      card.appendChild(controls);
+      card.appendChild(img);
+      card.appendChild(label);
+      return card;
+    })
+  );
+
+  const frag = document.createDocumentFragment();
+  for (const card of ready) frag.appendChild(card);
   cardsGrid.innerHTML = "";
   cardsGrid.appendChild(frag);
+  cardsGrid.dataset.loaded = "1";
 }
 
 // ---------- Events ----------

@@ -246,6 +246,12 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 /* Owned cards (My Cards page) */
+.loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--muted);
+  padding: 4px 0;
+} 
 .owned-card {
   position: relative;
   border: 1px solid var(--border);
