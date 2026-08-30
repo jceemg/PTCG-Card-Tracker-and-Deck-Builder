@@ -124,6 +124,14 @@ function putImgCache(key, url) {
   saveCache(IMGCACHE_KEY, c);
 }
 
+// Synchronously return the cached image URL for a card, or null if it isn't
+// cached yet. Lets callers render known images instantly without re-resolving.
+function getCachedImageUrl(c) {
+  const c2 = getImgCache();
+  const url = c2[cardKey(c)];
+  return url && url !== "NULL" ? url : null;
+}
+
 // Drop cached image URLs for a set of cards so they are re-resolved on the
 // next load. Used by the "Reload Card Images" button.
 function clearImgCache(cards) {

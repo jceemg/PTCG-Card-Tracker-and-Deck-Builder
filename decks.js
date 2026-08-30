@@ -149,23 +149,55 @@ function renderDetailList() {
 }
 
 async function renderDetailImages() {
-  detailImages.innerHTML = '<div class="hint">Loading card images&hellip;</div>';
   const uniques = new Map();
   for (const c of current.cards) {
     if (!uniques.has(cardKey(c))) uniques.set(cardKey(c), c);
   }
   const items = Array.from(uniques.values());
 
-  // Resolve every image in parallel so one slow card (e.g. a promo "me" set
-  // that needs an API lookup) doesn't block the rest of the deck.
-  const ready = await Promise.all(
-    items.map(async (c) => ({ c, img: await createCardImg(c) }))
-  );
-
+  // Render every card box immediately using the cached URL when available, so
+  // switching pages is instant (no re-download from the browser cache). Only
+  // previously-unseen cards fall through to resolve in the background.
   const frag = document.createDocumentFragment();
-  for (const { c, img } of ready) {
+  for (const c of items) {
     const card = document.createElement("div");
     card.className = "mini-card";
+    const img = document.createElement("img");
+    img.alt = c.name;
+    const cachedUrl = getCachedImageUrl(c);
+    if (cachedUrl) {
+      img.src = cachedUrl;
+      // If a cached URL is stale/broken, refresh it via the API fallback.
+      let tried = false;
+      img.addEventListener("error", async () => {
+        if (tried) {
+          img.alt = "no image: " + (c.name || "");
+          img.removeAttribute("src");
+          return;
+        }
+        tried = true;
+        clearImgCache([c]);
+        delete imagesHtmlCache[current.name];
+        const resolved = await createCardImg(c);
+        if (resolved.getAttribute("src")) img.src = resolved.getAttribute("src");
+        else {
+          img.alt = "no image: " + (c.name || "");
+          img.removeAttribute("src");
+        }
+      });
+    } else {
+      // Not cached yet: resolve now and attach the working image.
+      const resolved = await createCardImg(c);
+      if (resolved.getAttribute("src")) {
+        img.src = resolved.getAttribute("src");
+      } else {
+        img.alt = "no image: " + c.name;
+      }
+      img.addEventListener("error", () => {
+        img.alt = "no image: " + c.name;
+        img.removeAttribute("src");
+      });
+    }
     card.appendChild(img);
     if (c.count && c.count > 0) {
       const badge = document.createElement("div");
