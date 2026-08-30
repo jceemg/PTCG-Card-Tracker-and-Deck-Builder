@@ -12,6 +12,7 @@ const detailPanel = $("#detail-panel");
 const detailTitle = $("#detail-title");
 const backBtn = $("#back-btn");
 const renameBtn = $("#rename-btn");
+const applyStorageBtn = $("#apply-storage-btn");
 const removeStorageBtn = $("#remove-storage-btn");
 const deleteDeckBtn = $("#delete-deck-btn");
 const detailMsg = $("#detail-msg");
@@ -123,21 +124,30 @@ async function renderDetail() {
 }
 
 function renderDetailList() {
+  const storage = loadStorage();
   const thead = `
     <thead>
-      <tr><th>Card</th><th>Set</th><th>Count</th><th>Type</th></tr>
+      <tr><th>Card</th><th>Set</th><th>Count</th><th>In Storage</th><th>To Add</th><th>Status</th></tr>
     </thead>`;
   const tbody = current.cards
     .map((c) => {
-      const typeTag =
-        c.category === "energy"
-          ? '<span class="tag energy">Energy</span>'
-          : '<span class="tag ok">Card</span>';
+      const owned = storage[cardKey(c)] || 0;
+      const toAdd = c.category === "energy" ? 0 : Math.max(0, c.count - owned);
+      let tag;
+      if (c.category === "energy") {
+        tag = '<span class="tag energy">Energy</span>';
+      } else if (toAdd === 0) {
+        tag = '<span class="tag ok">Have it</span>';
+      } else {
+        tag = '<span class="tag topup">Add ' + toAdd + "</span>";
+      }
       return `<tr>
         <td>${escapeHtml(c.name)}</td>
         <td>${escapeHtml(c.setCode)}</td>
         <td>${c.count}</td>
-        <td>${typeTag}</td>
+        <td>${owned}</td>
+        <td>${toAdd}</td>
+        <td>${tag}</td>
       </tr>`;
     })
     .join("");
@@ -233,6 +243,39 @@ function removeFromStorage() {
   }
   saveStorage(storage);
   setMsg(detailMsg, `Removed ${removed} card(s) from your card storage.`, "ok");
+  renderDetailList();
+}
+
+// ---------- Apply deck cards to storage (top up missing) ----------
+function applyToStorage() {
+  if (!current) return;
+  const storage = loadStorage();
+  let added = 0;
+  let already = 0;
+  let energies = 0;
+  for (const c of current.cards) {
+    if (c.category === "energy") {
+      energies++;
+      continue;
+    }
+    const k = cardKey(c);
+    const owned = storage[k] || 0;
+    const toAdd = Math.max(0, c.count - owned);
+    if (toAdd === 0) {
+      already++;
+    } else {
+      storage[k] = owned + toAdd;
+      added += toAdd;
+    }
+  }
+  saveStorage(storage);
+  const skipNote = energies > 0 ? ` and skipped ${energies} energy card type(s)` : "";
+  setMsg(
+    detailMsg,
+    `Done! Added ${added} card(s) to storage, ${already} already in storage.${skipNote}.`,
+    "ok"
+  );
+  renderDetailList();
 }
 
 // ---------- Navigation state ----------
@@ -287,6 +330,7 @@ deleteDeckBtn.addEventListener("click", () => {
   closeDeck();
 });
 
+applyStorageBtn.addEventListener("click", applyToStorage);
 removeStorageBtn.addEventListener("click", removeFromStorage);
 
 reloadImagesBtn.addEventListener("click", async () => {
