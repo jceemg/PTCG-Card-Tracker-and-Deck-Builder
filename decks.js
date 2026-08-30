@@ -112,58 +112,30 @@ async function renderGrid() {
 async function renderDetail() {
   if (!current) return;
   detailTitle.textContent = current.name;
-  await renderDetailList();
+  renderDetailList();
   await renderDetailImages();
 }
 
-async function renderDetailList() {
-  detailList.innerHTML = '<div class="hint">Classifying cards&hellip;</div>';
-
-  // Classify each unique card via the API (cached).
-  const uniques = new Map();
-  for (const c of current.cards) {
-    if (!uniques.has(cardKey(c))) uniques.set(cardKey(c), c);
-  }
-  const classified = await Promise.all(
-    Array.from(uniques.values()).map(async (c) => ({
-      c,
-      category: await resolveCardCategory(c),
-    }))
-  );
-
-  const order = ["pokemon", "support", "energy"];
-  const titles = { pokemon: "Pokémon", support: "Support", energy: "Energy" };
-
-  const sections = order
-    .map((cat) => {
-      const rows = classified.filter((x) => x.category === cat);
-      if (rows.length === 0) return "";
-      const tbody = rows
-        .map(({ c }) => {
-          const typeTag =
-            c.category === "energy" || cat === "energy"
-              ? '<span class="tag energy">Energy</span>'
-              : cat === "support"
-                ? '<span class="tag support">Support</span>'
-                : '<span class="tag ok">Pokémon</span>';
-          return `<tr>
-            <td>${escapeHtml(c.name)}</td>
-            <td>${escapeHtml(c.setCode)}</td>
-            <td>${c.count}</td>
-            <td>${typeTag}</td>
-          </tr>`;
-        })
-        .join("");
-      return `
-        <h4 class="list-group">${escapeHtml(titles[cat])} <span class="count">${rows.length}</span></h4>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Card</th><th>Set</th><th>Count</th><th>Type</th></tr></thead>
-          <tbody>${tbody}</tbody>
-        </table></div>`;
+function renderDetailList() {
+  const thead = `
+    <thead>
+      <tr><th>Card</th><th>Set</th><th>Count</th><th>Type</th></tr>
+    </thead>`;
+  const tbody = current.cards
+    .map((c) => {
+      const typeTag =
+        c.category === "energy"
+          ? '<span class="tag energy">Energy</span>'
+          : '<span class="tag ok">Card</span>';
+      return `<tr>
+        <td>${escapeHtml(c.name)}</td>
+        <td>${escapeHtml(c.setCode)}</td>
+        <td>${c.count}</td>
+        <td>${typeTag}</td>
+      </tr>`;
     })
     .join("");
-
-  detailList.innerHTML = sections || '<div class="hint">No cards.</div>';
+  detailList.innerHTML = `<table>${thead}<tbody>${tbody}</tbody></table>`;
 }
 
 async function renderDetailImages() {

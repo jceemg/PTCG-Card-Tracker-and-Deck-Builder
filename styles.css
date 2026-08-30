@@ -150,25 +150,6 @@ tbody tr:last-child td { border-bottom: none; }
 .tag.ok { background: var(--green-bg); color: var(--green); }
 .tag.topup { background: var(--amber-bg); color: var(--amber); }
 .tag.energy { background: var(--panel-2); color: var(--muted); }
-.tag.support { background: var(--amber-bg); color: var(--amber); }
-
-.list-group {
-  margin: 18px 0 8px;
-  font-size: 15px;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.list-group:first-child { margin-top: 0; }
-.list-group .count {
-  background: var(--panel-2);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 1px 8px;
-  border-radius: 20px;
-}
 
 #result-msg {
   margin-top: 12px;
@@ -293,9 +274,6 @@ tbody tr:last-child td { border-bottom: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-#detail-list { max-height: none; overflow: visible; }
-#detail-list .table-wrap { margin-bottom: 10px; }
 
 #detail-msg { margin: 10px 0 0; }
 #detail-msg.ok { color: var(--green); }

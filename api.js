@@ -12,8 +12,6 @@ const PTCG_API = "https://api.pokemontcg.io/v2";
 const IMG_CDN = "https://images.pokemontcg.io";
 const SETMAP_KEY = "ptcg.setmap.v1";
 const IMGCACHE_KEY = "ptcg.imgcache.v1";
-const SUPERTYPE_KEY = "ptcg.supertp.v1";
-const SETSUPERTYPE_KEY = "ptcg.setsupertp.v1";
 const CACHE_MS = 1000 * 60 * 60 * 24; // 24h
 
 // Built-in map of common set abbreviations -> API set.id, so the first load
@@ -37,13 +35,12 @@ let queue = Promise.resolve();
 const MIN_GAP = 300;
 const MAX_RETRIES = 5;
 
-function throttledFetch(url, maxRetries) {
-  const limit = typeof maxRetries === "number" ? maxRetries : MAX_RETRIES;
+function throttledFetch(url) {
   const run = async () => {
     const wait = Math.max(0, lastRequest + MIN_GAP - Date.now());
     if (wait > 0) await sleep(wait);
     lastRequest = Date.now();
-    for (let attempt = 0; attempt < limit; attempt++) {
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         const resp = await fetch(url);
         if (resp.status === 429 || resp.status === 500 || resp.status === 502) {
@@ -210,108 +207,6 @@ async function findImageViaApi(c) {
 
 function imageOf(card) {
   return card.images && (card.images.large || card.images.small) || null;
-}
-
-// ---- Supertype classification (pokemon / support / energy) ----
-// Classify in bulk by set: fetch each set's full card list once (a handful of
-// requests) and record every card's supertype, so a deck needs only ~1-3 API
-// calls regardless of card count. All results are cached in localStorage.
-
-function mapSupertype(st) {
-  const s = (st || "").toLowerCase().replace(/[éÉ]/g, "e");
-  if (s === "trainer") return "support";
-  if (s === "pokemon") return "pokemon";
-  if (s === "energy") return "energy";
-  // Unlikely, but default to pokemon if we cannot tell.
-  return "pokemon";
-}
-
-// In-flight set fetches so parallel calls don't double-request a set.
-const setInflight = {};
-
-function getSetSupertypeCache() {
-  return loadCache(SETSUPERTYPE_KEY, {});
-}
-
-function putSetSupertypeCache(setId, map) {
-  const c = getSetSupertypeCache();
-  c[setId] = { fetchedAt: Date.now(), cards: map };
-  saveCache(SETSUPERTYPE_KEY, c);
-}
-
-// Return { [number]: "pokemon"|"support"|"energy" } for a set id.
-async function resolveSetSupertypes(setId) {
-  const cache = getSetSupertypeCache();
-  const cached = cache[setId];
-  if (cached && Date.now() - cached.fetchedAt < CACHE_MS) return cached.cards;
-  if (setInflight[setId]) return setInflight[setId];
-
-  setInflight[setId] = (async () => {
-    const map = {};
-    let page = 1;
-    for (;;) {
-      const r = await throttledFetch(
-        `${PTCG_API}/cards?q=${encodeURIComponent(`set.id:${setId}`)}&page=${page}&pageSize=250`,
-        2
-      );
-      if (!r || !r.data || r.data.length === 0) break;
-      for (const card of r.data) {
-        if (card.number) map[card.number] = mapSupertype(card.supertype);
-      }
-      if (r.data.length < 250) break;
-      page++;
-    }
-    putSetSupertypeCache(setId, map);
-    return map;
-  })().finally(() => {
-    delete setInflight[setId];
-  });
-
-  return setInflight[setId];
-}
-
-// Return "pokemon", "support" or "energy" for a card.
-async function resolveCardCategory(c) {
-  const key = cardKey(c);
-  const cache = getSupertypeCache();
-  if (cache[key]) return cache[key];
-
-  // Energy is determinable from the deck line itself.
-  if ((c.category || "").toLowerCase() === "energy") {
-    putSupertypeCache(key, "energy");
-    return "energy";
-  }
-
-  let cat = "pokemon";
-  const setMap = await getSetMap();
-  const apiSet = setMap[(c.setCode || "").toLowerCase()];
-  if (apiSet) {
-    // One bulk request classifies every card in the set.
-    const setCats = await resolveSetSupertypes(apiSet);
-    if (setCats[c.number]) cat = setCats[c.number];
-  }
-
-  // Fallback: single name-based lookup if the set path gave us nothing.
-  if (c.category !== "energy" && !(apiSet && getSetSupertpHas(apiSet, c.number))) {
-    const q = `name:"${c.name}"`;
-    const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=5`, 1);
-    if (data && data.data) {
-      const hit =
-        data.data.find((x) => !c.number || x.number === c.number) || data.data[0];
-      if (hit) {
-        const m = mapSupertype(hit.supertype);
-        if (m !== "pokemon") cat = m;
-      }
-    }
-  }
-
-  putSupertypeCache(key, cat);
-  return cat;
-}
-
-function getSetSupertpHas(setId, number) {
-  const c = getSetSupertypeCache();
-  return !!(c[setId] && c[setId].cards && c[setId].cards[number]);
 }
 
 // ---- Build an <img> for a card with automatic API fallback ----
