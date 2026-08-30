@@ -27,14 +27,14 @@ const BUILTIN_SETMAP = {
   sv01: "sv1", sv02: "sv2", sv03: "sv3", sv04: "sv4",
   ace: "sv8pt5", prm: "piv", sve: "sve", svp: "svp",
   meg: "me1", pfl: "me2", por: "me3", cri: "me4", pbl: "me5",
-  asc: "me2pt5",
+  asc: "me2pt5", mee: "mee",
 };
 
 // Promo "me" sets whose images are NOT served by the pokemontcg.io CDN. Only
 // these still need the slow API/scrydex fallback; the others (me1, me2) now
 // exist on the CDN and can use the fast direct-URL path. The stored keys are
 // the ptcgoCodes (lowercase) from BUILTIN_SETMAP.
-const ME_CDN_MISSING = new Set(["por", "cri", "pbl", "asc"]);
+const ME_CDN_MISSING = new Set(["por", "cri", "pbl", "asc", "mee"]);
 
 // ---- Rate limiter (falls back for API lookups) ----
 let lastRequest = 0;
@@ -173,11 +173,26 @@ function cardKey(c) {
 function directImageUrl(c, setMap) {
   const id = (c.setCode || "").toLowerCase();
   const apiSet = setMap[id];
-  // A few promo "me" sets (me3-me5, me2pt5) are still not on the CDN and 404
-  // there; they need the slow API/scrydex lookup. me1/me2 now work on the CDN.
+  // A few promo "me" sets (me3-me5, me2pt5, mee) are still not on the CDN and
+  // 404 there; they need the scrydex fallback. me1/me2 now work on the CDN.
   if (ME_CDN_MISSING.has(id)) return null;
   if (apiSet && c.number) {
     return `${IMG_CDN}/${apiSet}/${c.number}_hires.png`;
+  }
+  return null;
+}
+
+// Scrydex hosts the promo "me" sets (me3-me5, me2pt5, mee) that are missing
+// from the pokemontcg.io CDN. It uses the same API set id + collector number,
+// e.g. https://images.scrydex.com/pokemon/mee-5/large. Built directly, so it's
+// fast (no API call) and reliable, unlike the API's imageOf() which returns the
+// doomed CDN URL for these sets.
+function scrydexImageUrl(c, setMap) {
+  const id = (c.setCode || "").toLowerCase();
+  if (!ME_CDN_MISSING.has(id)) return null;
+  const apiSet = setMap[id];
+  if (apiSet && c.number) {
+    return `https://images.scrydex.com/pokemon/${apiSet}-${c.number}/large`;
   }
   return null;
 }
@@ -206,6 +221,14 @@ async function resolveCardImage(c) {
   if (direct) {
     putImgCache(key, direct);
     return direct;
+  }
+
+  // 2b. Scrydex fallback for promo sets missing from the CDN. Built directly
+  //     (no API call) and caches fine, covering me3-me5 / me2pt5 / mee.
+  const scrydex = scrydexImageUrl(c, setMap);
+  if (scrydex) {
+    putImgCache(key, scrydex);
+    return scrydex;
   }
 
   // 3. Known-bad (already tried API and failed).
