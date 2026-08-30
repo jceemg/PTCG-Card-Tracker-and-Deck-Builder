@@ -93,6 +93,18 @@ textarea {
   resize: vertical;
 }
 
+.search-bar { margin: 12px 0; }
+.search-bar input[type="search"] {
+  width: 100%;
+  max-width: 420px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
 .controls {
   margin-top: 14px;
   display: flex;

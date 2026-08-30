@@ -18,10 +18,12 @@ const saveDeckBtn = $("#save-deck-btn");
 const resultMsg = $("#result-msg");
 const storagePanel = $("#storage-panel");
 const storageList = $("#storage-list");
+const storageSearch = $("#storage-search");
 const clearStorage = $("#clear-storage");
 
 // ---------- State ----------
 let parsedCards = []; // {name, setCode, number, count, category}
+let storageQuery = "";
 
 // ---------- Card storage (localStorage) ----------
 function loadStorage() {
@@ -182,7 +184,15 @@ function applyToStorage() {
 // ---------- Storage render ----------
 function renderStorage() {
   const storage = loadStorage();
-  const entries = Object.entries(storage).sort((a, b) => a[0].localeCompare(b[0]));
+  const query = storageQuery.trim().toLowerCase();
+  const entries = Object.entries(storage)
+    .filter(([key, count]) => {
+      if (!query) return true;
+      // Match against the visible label (name + set + number) so searching by
+      // card name, set code, or collector number all work.
+      return key.toLowerCase().includes(query);
+    })
+    .sort((a, b) => a[0].localeCompare(b[0]));
 
   if (entries.length === 0) {
     storageList.innerHTML =
@@ -285,6 +295,11 @@ storageList.addEventListener("click", (e) => {
   }
   saveStorage(storage);
   renderStorage();
+});
+
+storageSearch.addEventListener("input", () => {
+  storageQuery = storageSearch.value;
+  if (loadStorage() && Object.keys(loadStorage()).length > 0) renderStorage();
 });
 
 excludeEnergy.addEventListener("change", () => {
