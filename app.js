@@ -199,7 +199,13 @@ function applyToStorage() {
         energies++;
         continue;
       }
-      setStorageEntry(storage, r.key, c.count, "energy");
+      const toAdd = Math.max(0, c.count - r.owned);
+      if (toAdd === 0) {
+        already++;
+      } else {
+        setStorageEntry(storage, r.key, r.owned + toAdd, "energy");
+        added += toAdd;
+      }
       continue;
     }
     const toAdd = Math.max(0, c.count - r.owned);

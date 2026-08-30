@@ -218,8 +218,10 @@ async function renderDetailImages() {
   const items = Array.from(uniques.values());
 
   // Resolve every card image in parallel so one slow card (e.g. a promo "me"
-  // set) doesn't block the rest, then render them together.
-  const ready = await Promise.all(items.map(async (c) => buildMiniCard(c)));
+  // set) doesn't block the rest, then render them together. deckName is passed
+  // to buildMiniCard so an image error that fires after the user switches
+  // decks clears the right deck's image cache.
+  const ready = await Promise.all(items.map(async (c) => buildMiniCard(c, deckName)));
 
   // Discard the result if the user switched decks while we were loading.
   if (token !== renderToken || current.name !== deckName) return;
@@ -232,8 +234,9 @@ async function renderDetailImages() {
 }
 
 // Build one mini-card. Uses the cached URL when available so switching decks
-// is instant; otherwise resolves it (with an error fallback).
-async function buildMiniCard(c) {
+// is instant; otherwise resolves it (with an error fallback). deckName is the
+// deck this card belongs to, so error retries clear the correct image cache.
+async function buildMiniCard(c, deckName) {
   const card = document.createElement("div");
   card.className = "mini-card";
   const img = document.createElement("img");
@@ -251,7 +254,7 @@ async function buildMiniCard(c) {
       }
       tried = true;
       clearImgCache([c]);
-      delete imagesHtmlCache[current.name];
+      delete imagesHtmlCache[deckName];
       const resolved = await createCardImg(c);
       if (resolved.getAttribute("src")) img.src = resolved.getAttribute("src");
       else {
@@ -391,7 +394,6 @@ deleteDeckBtn.addEventListener("click", () => {
   if (!confirm(`Delete deck "${current.name}"? The cards stay in your card storage.`)) return;
   decks = decks.filter((d) => d.name !== current.name);
   saveDecks(decks);
-  setMsg(document.querySelector("#no-decks"), "", "");
   closeDeck();
 });
 
@@ -460,7 +462,8 @@ importFile.addEventListener("change", async () => {
     saveDecks(data.decks);
     // Drop in-memory render caches so re-opened decks show fresh images.
     for (const key of Object.keys(imagesHtmlCache)) delete imagesHtmlCache[key];
-    closeDeck();
+    current = null;
+    detailPanel.classList.add("hidden");
     await renderGrid();
     setMsg(backupMsg, "Backup restored. Your cards and decks have been replaced.", "ok");
   } catch (e) {

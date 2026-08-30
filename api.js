@@ -121,6 +121,10 @@ function getSetMap() {
         saveCache(SETMAP_KEY, { fetchedAt: Date.now(), map: Object.assign({}, BUILTIN_SETMAP, fresh) });
       } catch (e) {
         /* keep current set map */
+      } finally {
+        // Allow the next getSetMap() call to rebuild from the refreshed cache
+        // instead of being stuck with this session's first snapshot forever.
+        setMapPromise = null;
       }
     })();
 
