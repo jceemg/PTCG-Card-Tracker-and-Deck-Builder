@@ -15,7 +15,7 @@
         <a href="decks.html">My Decks</a>
       </span>
     </nav>
-    <p class="subtitle">Paste a deck list &mdash; we check your card storage, top up what you're missing, and build a duplicate-free proxy print sheet.</p>
+    <p class="subtitle">Paste a deck list &mdash; we check your card storage, top up what you're missing, and help you save your deck.</p>
   </header>
 
   <main>
@@ -39,7 +39,6 @@
       <div class="controls">
         <button id="apply-btn" class="primary">Apply to Card Storage (Top Up Missing)</button>
         <button id="save-deck-btn">Save as Deck</button>
-        <button id="print-btn">Build Proxy Print Sheet</button>
       </div>
       <div id="result-msg"></div>
     </section>
@@ -48,16 +47,6 @@
     <section class="panel hidden" id="storage-panel">
       <h2>3. Your Card Storage <button id="clear-storage" class="danger small">Clear All</button></h2>
       <div id="storage-list" class="table-wrap"></div>
-    </section>
-
-    <!-- Print sheet -->
-    <section class="panel hidden" id="print-panel">
-      <h2>Proxy Print Sheet</h2>
-      <p class="hint">One copy of each unique card. No duplicates.</p>
-      <div id="print-grid" class="print-grid"></div>
-      <div class="controls">
-        <button id="send-print">Print</button>
-      </div>
     </section>
   </main>
 

@@ -13,15 +13,11 @@ const detailTitle = $("#detail-title");
 const backBtn = $("#back-btn");
 const renameBtn = $("#rename-btn");
 const removeStorageBtn = $("#remove-storage-btn");
-const printBtn = $("#print-btn");
 const deleteDeckBtn = $("#delete-deck-btn");
 const detailMsg = $("#detail-msg");
 const detailList = $("#detail-list");
 const detailImages = $("#detail-images");
 const reloadImagesBtn = $("#reload-images-btn");
-const printPanel = $("#print-panel");
-const printGrid = $("#print-grid");
-const sendPrint = $("#send-print");
 
 // ---------- State ----------
 let decks = [];
@@ -239,61 +235,10 @@ function removeFromStorage() {
   setMsg(detailMsg, `Removed ${removed} card(s) from your card storage.`, "ok");
 }
 
-// ---------- Proxy print sheet for current deck ----------
-async function buildPrintSheet() {
-  if (!current) return;
-  const uniques = new Map();
-  for (const c of current.cards) {
-    if (c.category === "energy") continue;
-    if (!uniques.has(cardKey(c))) uniques.set(cardKey(c), c);
-  }
-  const arr = Array.from(uniques.values());
-
-  printGrid.innerHTML = '<div class="hint">Loading card images from the Pokémon TCG API&hellip;</div>';
-  printPanel.classList.remove("hidden");
-  printPanel.scrollIntoView({ behavior: "smooth" });
-
-  let count = 0;
-  let failed = 0;
-  for (const c of arr) {
-    const img = await createCardImg(c);
-    if (img.getAttribute("src")) {
-      const card = document.createElement("div");
-      card.className = "print-card";
-      card.appendChild(img);
-      if (c.count && c.count > 0) {
-        const badge = document.createElement("div");
-        badge.className = "count-badge";
-        badge.textContent = `${c.count}x`;
-        card.appendChild(badge);
-      }
-      const label = document.createElement("div");
-      label.className = "label";
-      label.textContent = `${c.name} ${c.setCode}`;
-      card.appendChild(label);
-      printGrid.appendChild(card);
-      count++;
-    } else {
-      failed++;
-    }
-  }
-
-  if (count === 0) {
-    printGrid.innerHTML =
-      '<div class="hint">No card images could be loaded from the API for this deck.</div>';
-  } else if (failed > 0) {
-    const hint = document.createElement("div");
-    hint.className = "hint";
-    hint.textContent = `Loaded ${count} unique card(s). ${failed} could not be resolved.`;
-    printGrid.prepend(hint);
-  }
-}
-
 // ---------- Navigation state ----------
 function openDeck(name) {
   current = decks.find((d) => d.name === name) || null;
   if (!current) return;
-  printPanel.classList.add("hidden");
   renderDetail();
   detailPanel.classList.remove("hidden");
   detailPanel.scrollIntoView({ behavior: "smooth" });
@@ -302,7 +247,6 @@ function openDeck(name) {
 function closeDeck() {
   current = null;
   detailPanel.classList.add("hidden");
-  printPanel.classList.add("hidden");
   renderGrid();
 }
 
@@ -352,9 +296,6 @@ reloadImagesBtn.addEventListener("click", async () => {
   await renderDetailImages();
   setMsg(detailMsg, "Card images reloaded.", "ok");
 });
-
-printBtn.addEventListener("click", buildPrintSheet);
-sendPrint.addEventListener("click", () => window.print());
 
 // ---------- Init ----------
 renderGrid();

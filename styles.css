@@ -160,47 +160,6 @@ tbody tr:last-child td { border-bottom: none; }
 #result-msg.ok { background: var(--green-bg); color: var(--green); }
 #result-msg.err { background: var(--red-bg); color: var(--red); }
 
-.print-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  margin-top: 12px;
-}
-
-.print-card {
-  position: relative;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  text-align: center;
-  background: var(--panel-2);
-}
-.print-card img { width: 100%; display: block; }
-.print-card .label {
-  padding: 6px 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-/* Print styles: only the card images, no title/loading/labels, tight grid */
-@media print {
-  body * { visibility: hidden; }
-  #print-panel, #print-panel * { visibility: visible; }
-  #print-panel { position: absolute; inset: 0; box-shadow: none; margin: 0; padding: 0; border: none; }
-  #print-panel h2,
-  #print-panel .hint,
-  #print-panel .count-badge,
-  #print-panel .print-card .label { display: none !important; }
-  #print-panel .controls { display: none; }
-  #print-panel .print-card { border: none; border-radius: 0; margin: 0; padding: 0; }
-  .print-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 2px;
-    margin: 0;
-  }
-  .print-card img { width: 100%; display: block; }
-}
-
 .err-msg {
   color: var(--red);
   font-size: 13px;
