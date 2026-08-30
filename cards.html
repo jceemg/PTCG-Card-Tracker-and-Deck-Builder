@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Cards — PTCG Card Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <nav class="topnav">
+      <span class="brand">PTCG Tracker &amp; Deck Builder</span>
+      <span class="links">
+        <a href="index.html">Tracker</a>
+        <a href="cards.html" class="active">My Cards</a>
+        <a href="decks.html">My Decks</a>
+      </span>
+    </nav>
+    <p class="subtitle">Your cards. Use the + and &minus; buttons above each card to add or remove copies.</p>
+  </header>
+
+  <main>
+    <section class="panel" id="cards-panel">
+      <h2>My Cards</h2>
+      <div id="cards-grid" class="card-imgs"></div>
+      <p id="no-cards" class="hint hidden">No cards yet. Paste a deck list on the <a href="index.html">Tracker</a> and apply it to your card storage.</p>
+    </section>
+  </main>
+
+  <script src="api.js"></script>
+  <script src="cards.js"></script>
+</body>
+</html>
