@@ -124,6 +124,21 @@ function putImgCache(key, url) {
   saveCache(IMGCACHE_KEY, c);
 }
 
+// Drop cached image URLs for a set of cards so they are re-resolved on the
+// next load. Used by the "Reload Card Images" button.
+function clearImgCache(cards) {
+  const c = getImgCache();
+  let changed = false;
+  for (const card of cards || []) {
+    const k = cardKey(card);
+    if (k in c) {
+      delete c[k];
+      changed = true;
+    }
+  }
+  if (changed) saveCache(IMGCACHE_KEY, c);
+}
+
 function cardKey(c) {
   return `${c.name}|${c.setCode}|${c.number || ""}`;
 }

@@ -18,6 +18,7 @@ const deleteDeckBtn = $("#delete-deck-btn");
 const detailMsg = $("#detail-msg");
 const detailList = $("#detail-list");
 const detailImages = $("#detail-images");
+const reloadImagesBtn = $("#reload-images-btn");
 const printPanel = $("#print-panel");
 const printGrid = $("#print-grid");
 const sendPrint = $("#send-print");
@@ -289,6 +290,13 @@ deleteDeckBtn.addEventListener("click", () => {
 });
 
 removeStorageBtn.addEventListener("click", removeFromStorage);
+
+reloadImagesBtn.addEventListener("click", async () => {
+  if (!current) return;
+  clearImgCache(current.cards);
+  await renderDetailImages();
+  setMsg(detailMsg, "Card images reloaded.", "ok");
+});
 
 printBtn.addEventListener("click", buildPrintSheet);
 sendPrint.addEventListener("click", () => window.print());

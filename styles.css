@@ -237,7 +237,8 @@ tbody tr:last-child td { border-bottom: none; }
 
 .detail-head h2 { font-size: 22px; }
 .detail-head .controls { justify-content: flex-start; }
-#detail-panel h3 { margin: 22px 0 10px; }
+#detail-panel h3 { margin: 22px 0 10px; display: flex; align-items: center; gap: 10px; }
+#detail-panel h3 button.small { margin-left: auto; }
 
 .card-imgs {
   display: grid;
