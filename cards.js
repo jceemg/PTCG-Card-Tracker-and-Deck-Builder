@@ -7,6 +7,9 @@ const STORAGE_KEY = "ptcg.storage.v1";
 const $ = (sel) => document.querySelector(sel);
 const cardsGrid = $("#cards-grid");
 const noCards = $("#no-cards");
+const cardsSearch = $("#cards-search");
+
+let cardsQuery = "";
 
 // ---------- Storage ----------
 function loadStorage() {
@@ -37,13 +40,26 @@ async function renderCards() {
   if (keys.length === 0) {
     cardsGrid.innerHTML = "";
     noCards.classList.remove("hidden");
+    noCards.textContent = "No cards yet. Paste a deck list on the Tracker and apply it to your card storage.";
     return;
   }
   noCards.classList.add("hidden");
 
   const cards = keys
     .map((key) => ({ key, count: storage[key] || 0 }))
-    .filter((c) => c.count > 0);
+    .filter((c) => c.count > 0)
+    .filter((c) => {
+      if (!cardsQuery) return true;
+      return c.key.toLowerCase().includes(cardsQuery);
+    });
+
+  // No cards match the current search, but cards do exist.
+  if (cards.length === 0) {
+    cardsGrid.innerHTML = "";
+    noCards.classList.remove("hidden");
+    noCards.textContent = "No cards match your search.";
+    return;
+  }
 
   // Show a loading indicator while images resolve on the first pass.
   if (cardsGrid.dataset.loaded !== "1") {
@@ -96,6 +112,16 @@ async function renderCards() {
 }
 
 // ---------- Events ----------
+cardsSearch.addEventListener("input", () => {
+  const query = cardsSearch.value.trim().toLowerCase();
+  if (query === cardsQuery) return;
+  cardsQuery = query;
+  // Reset the loading flag so a fresh (filtered) grid shows the indicator
+  // instead of briefly reusing stale cards.
+  delete cardsGrid.dataset.loaded;
+  renderCards();
+});
+
 cardsGrid.addEventListener("click", async (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
