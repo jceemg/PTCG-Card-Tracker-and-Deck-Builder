@@ -133,29 +133,13 @@ function getCachedImageUrl(c) {
 }
 
 // Drop cached image URLs for a set of cards so they are re-resolved on the
-// next load. Used by the "Reload Card Images" button.
+// next load. Used for automatic retry when an image fails to load.
 function clearImgCache(cards) {
   const c = getImgCache();
   let changed = false;
   for (const card of cards || []) {
     const k = cardKey(card);
     if (k in c) {
-      delete c[k];
-      changed = true;
-    }
-  }
-  if (changed) saveCache(IMGCACHE_KEY, c);
-}
-
-// Drop only cached "known bad" image entries for a set of cards so a reload
-// retries the ones that previously failed without wiping the working URLs
-// (which would make every deck sharing those cards slow to load again).
-function clearBrokenImgCache(cards) {
-  const c = getImgCache();
-  let changed = false;
-  for (const card of cards || []) {
-    const k = cardKey(card);
-    if (c[k] === "NULL") {
       delete c[k];
       changed = true;
     }

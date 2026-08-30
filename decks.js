@@ -18,7 +18,6 @@ const deleteDeckBtn = $("#delete-deck-btn");
 const detailMsg = $("#detail-msg");
 const detailList = $("#detail-list");
 const detailImages = $("#detail-images");
-const reloadImagesBtn = $("#reload-images-btn");
 
 // ---------- State ----------
 let decks = [];
@@ -354,14 +353,6 @@ deleteDeckBtn.addEventListener("click", () => {
 
 applyStorageBtn.addEventListener("click", applyToStorage);
 removeStorageBtn.addEventListener("click", removeFromStorage);
-
-reloadImagesBtn.addEventListener("click", async () => {
-  if (!current) return;
-  clearBrokenImgCache(current.cards);
-  delete imagesHtmlCache[current.name];
-  await renderDetailImages();
-  setMsg(detailMsg, "Card images reloaded.", "ok");
-});
 
 // ---------- Init ----------
 renderGrid();
