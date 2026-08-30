@@ -155,71 +155,80 @@ function renderDetailList() {
 }
 
 async function renderDetailImages() {
+  // Clear any previous deck's images immediately and show a loading state so
+  // stale cards from the last deck never show while this one is loading.
+  detailImages.innerHTML = '<div class="loading">Loading card images&hellip;</div>';
+
   const uniques = new Map();
   for (const c of current.cards) {
     if (!uniques.has(cardKey(c))) uniques.set(cardKey(c), c);
   }
   const items = Array.from(uniques.values());
 
-  // Render every card box immediately using the cached URL when available, so
-  // switching pages is instant (no re-download from the browser cache). Only
-  // previously-unseen cards fall through to resolve in the background.
+  // Resolve every card image in parallel so one slow card (e.g. a promo "me"
+  // set) doesn't block the rest, then render them together.
+  const ready = await Promise.all(items.map(async (c) => buildMiniCard(c)));
+
   const frag = document.createDocumentFragment();
-  for (const c of items) {
-    const card = document.createElement("div");
-    card.className = "mini-card";
-    const img = document.createElement("img");
-    img.alt = c.name;
-    const cachedUrl = getCachedImageUrl(c);
-    if (cachedUrl) {
-      img.src = cachedUrl;
-      // If a cached URL is stale/broken, refresh it via the API fallback.
-      let tried = false;
-      img.addEventListener("error", async () => {
-        if (tried) {
-          img.alt = "no image: " + (c.name || "");
-          img.removeAttribute("src");
-          return;
-        }
-        tried = true;
-        clearImgCache([c]);
-        delete imagesHtmlCache[current.name];
-        const resolved = await createCardImg(c);
-        if (resolved.getAttribute("src")) img.src = resolved.getAttribute("src");
-        else {
-          img.alt = "no image: " + (c.name || "");
-          img.removeAttribute("src");
-        }
-      });
-    } else {
-      // Not cached yet: resolve now and attach the working image.
-      const resolved = await createCardImg(c);
-      if (resolved.getAttribute("src")) {
-        img.src = resolved.getAttribute("src");
-      } else {
-        img.alt = "no image: " + c.name;
-      }
-      img.addEventListener("error", () => {
-        img.alt = "no image: " + c.name;
-        img.removeAttribute("src");
-      });
-    }
-    card.appendChild(img);
-    if (c.count && c.count > 0) {
-      const badge = document.createElement("div");
-      badge.className = "count-badge";
-      badge.textContent = `${c.count}x`;
-      card.appendChild(badge);
-    }
-    const label = document.createElement("div");
-    label.className = "label";
-    label.textContent = `${c.name} ${c.setCode}`;
-    card.appendChild(label);
-    frag.appendChild(card);
-  }
+  for (const mini of ready) frag.appendChild(mini);
   detailImages.innerHTML = "";
   detailImages.appendChild(frag);
   imagesHtmlCache[current.name] = detailImages.innerHTML;
+}
+
+// Build one mini-card. Uses the cached URL when available so switching decks
+// is instant; otherwise resolves it (with an error fallback).
+async function buildMiniCard(c) {
+  const card = document.createElement("div");
+  card.className = "mini-card";
+  const img = document.createElement("img");
+  img.alt = c.name;
+  const cachedUrl = getCachedImageUrl(c);
+  if (cachedUrl) {
+    img.src = cachedUrl;
+    // If a cached URL is stale/broken, refresh it via the API fallback.
+    let tried = false;
+    img.addEventListener("error", async () => {
+      if (tried) {
+        img.alt = "no image: " + (c.name || "");
+        img.removeAttribute("src");
+        return;
+      }
+      tried = true;
+      clearImgCache([c]);
+      delete imagesHtmlCache[current.name];
+      const resolved = await createCardImg(c);
+      if (resolved.getAttribute("src")) img.src = resolved.getAttribute("src");
+      else {
+        img.alt = "no image: " + (c.name || "");
+        img.removeAttribute("src");
+      }
+    });
+  } else {
+    // Not cached yet: resolve now and attach the working image.
+    const resolved = await createCardImg(c);
+    if (resolved.getAttribute("src")) {
+      img.src = resolved.getAttribute("src");
+    } else {
+      img.alt = "no image: " + c.name;
+    }
+    img.addEventListener("error", () => {
+      img.alt = "no image: " + c.name;
+      img.removeAttribute("src");
+    });
+  }
+  card.appendChild(img);
+  if (c.count && c.count > 0) {
+    const badge = document.createElement("div");
+    badge.className = "count-badge";
+    badge.textContent = `${c.count}x`;
+    card.appendChild(badge);
+  }
+  const label = document.createElement("div");
+  label.className = "label";
+  label.textContent = `${c.name} ${c.setCode}`;
+  card.appendChild(label);
+  return card;
 }
 
 // ResolveCardImage is defined in api.js (shared).
