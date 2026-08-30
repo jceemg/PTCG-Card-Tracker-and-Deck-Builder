@@ -6,15 +6,15 @@
    ========================================================================== */
 
 :root {
-  --bg: #0d0a08;
-  --bg-grad-1: #1a120e;
-  --bg-grad-2: #0c0a09;
-  --panel: rgba(25, 19, 16, 0.72);
-  --panel-solid: #17110e;
-  --panel-2: #231914;
-  --panel-3: #2e2019;
-  --border: #3a2b23;
-  --border-soft: #2b1f1a;
+  --bg: #0b0f14;
+  --bg-grad-1: #10161f;
+  --bg-grad-2: #0b1017;
+  --panel: rgba(26, 33, 42, 0.72);
+  --panel-solid: #1a2129;
+  --panel-2: #252e39;
+  --panel-3: #2d3742;
+  --border: #2e3a46;
+  --border-soft: #232c36;
   --text: #eaf0f6;
   --muted: #9fb0bf;
   --faint: #6b7b8a;
@@ -66,7 +66,7 @@ header {
   z-index: 50;
   backdrop-filter: blur(var(--blur));
   -webkit-backdrop-filter: blur(var(--blur));
-  background: rgba(13, 10, 8, 0.72);
+  background: rgba(11, 15, 20, 0.72);
   border-bottom: 1px solid var(--border-soft);
 }
 
@@ -378,7 +378,7 @@ tbody tr:last-child td { border-bottom: none; }
 
 .deck-thumb {
   aspect-ratio: 63 / 88;
-  background: #0d0a08;
+  background: #0b0f14;
   display: flex;
   align-items: center;
   justify-content: center;
