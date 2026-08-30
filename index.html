@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PTCG Card Tracker & Deck Builder</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>PTCG Card Tracker &amp; Deck Builder</h1>
+    <p class="subtitle">Paste a deck list &mdash; we check your card storage, top up what you're missing, and build a duplicate-free proxy print sheet.</p>
+  </header>
+
+  <main>
+    <!-- Paste deck list -->
+    <section class="panel" id="import-panel">
+      <h2>1. Paste a deck list</h2>
+      <textarea id="deck-input" rows="14" placeholder="Pokémon: 21&#10;4 Slowpoke SCR 57&#10;3 Slowking SCR 58&#10;..."></textarea>
+      <div class="controls">
+        <input type="checkbox" id="exclude-energy" checked>
+        <label for="exclude-energy">Exclude energy cards from storage top-up (never auto-add them)</label>
+      </div>
+      <div class="controls">
+        <button id="parse-btn">Parse Deck List</button>
+      </div>
+    </section>
+
+    <!-- Parsed summary -->
+    <section class="panel hidden" id="summary-panel">
+      <h2>2. Deck summary</h2>
+      <div id="summary-targets" class="table-wrap"></div>
+      <div class="controls">
+        <button id="apply-btn" class="primary">Apply to Card Storage (Top Up Missing)</button>
+        <button id="print-btn">Build Proxy Print Sheet</button>
+      </div>
+      <div id="result-msg"></div>
+    </section>
+
+    <!-- Storage -->
+    <section class="panel hidden" id="storage-panel">
+      <h2>3. Your Card Storage <button id="clear-storage" class="danger small">Clear All</button></h2>
+      <div id="storage-list" class="table-wrap"></div>
+    </section>
+
+    <!-- Print sheet -->
+    <section class="panel hidden" id="print-panel">
+      <h2>Proxy Print Sheet</h2>
+      <p class="hint">One copy of each unique card. No duplicates.</p>
+      <div id="print-grid" class="print-grid"></div>
+      <div class="controls">
+        <button id="send-print">Print</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
