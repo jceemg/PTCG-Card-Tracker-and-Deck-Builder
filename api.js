@@ -13,6 +13,7 @@ const IMG_CDN = "https://images.pokemontcg.io";
 const SETMAP_KEY = "ptcg.setmap.v1";
 const IMGCACHE_KEY = "ptcg.imgcache.v1";
 const SUPERTYPE_KEY = "ptcg.supertp.v1";
+const SETSUPERTYPE_KEY = "ptcg.setsupertp.v1";
 const CACHE_MS = 1000 * 60 * 60 * 24; // 24h
 
 // Built-in map of common set abbreviations -> API set.id, so the first load
@@ -200,16 +201,61 @@ function imageOf(card) {
 }
 
 // ---- Supertype classification (pokemon / support / energy) ----
-// Cached in localStorage so we only hit the API once per unique card.
+// Classify in bulk by set: fetch each set's full card list once (a handful of
+// requests) and record every card's supertype, so a deck needs only ~1-3 API
+// calls regardless of card count. All results are cached in localStorage.
 
-function getSupertypeCache() {
-  return loadCache(SUPERTYPE_KEY, {});
+function mapSupertype(st) {
+  const s = (st || "").toLowerCase().replace(/[éÉ]/g, "e");
+  if (s === "trainer") return "support";
+  if (s === "pokemon") return "pokemon";
+  if (s === "energy") return "energy";
+  // Unlikely, but default to pokemon if we cannot tell.
+  return "pokemon";
 }
 
-function putSupertypeCache(key, cat) {
-  const c = getSupertypeCache();
-  c[key] = cat;
-  saveCache(SUPERTYPE_KEY, c);
+// In-flight set fetches so parallel calls don't double-request a set.
+const setInflight = {};
+
+function getSetSupertypeCache() {
+  return loadCache(SETSUPERTYPE_KEY, {});
+}
+
+function putSetSupertypeCache(setId, map) {
+  const c = getSetSupertypeCache();
+  c[setId] = { fetchedAt: Date.now(), cards: map };
+  saveCache(SETSUPERTYPE_KEY, c);
+}
+
+// Return { [number]: "pokemon"|"support"|"energy" } for a set id.
+async function resolveSetSupertypes(setId) {
+  const cache = getSetSupertypeCache();
+  const cached = cache[setId];
+  if (cached && Date.now() - cached.fetchedAt < CACHE_MS) return cached.cards;
+  if (setInflight[setId]) return setInflight[setId];
+
+  setInflight[setId] = (async () => {
+    const map = {};
+    let page = 1;
+    for (;;) {
+      const r = await throttledFetch(
+        `${PTCG_API}/cards?q=${encodeURIComponent(`set.id:${setId}`)}&page=${page}&pageSize=250`,
+        2
+      );
+      if (!r || !r.data || r.data.length === 0) break;
+      for (const card of r.data) {
+        if (card.number) map[card.number] = mapSupertype(card.supertype);
+      }
+      if (r.data.length < 250) break;
+      page++;
+    }
+    putSetSupertypeCache(setId, map);
+    return map;
+  })().finally(() => {
+    delete setInflight[setId];
+  });
+
+  return setInflight[setId];
 }
 
 // Return "pokemon", "support" or "energy" for a card.
@@ -224,33 +270,36 @@ async function resolveCardCategory(c) {
     return "energy";
   }
 
-  // Name-based lookup is the reliable, fast primary. Supertype is consistent
-  // per card name, so this gives accurate Pokémon/Trainer classification.
-  // This is a best-effort cosmetic grouping: one quick attempt, no long retry
-  // chains, since a miss just falls back to "pokemon".
-  const q = `name:"${c.name}"`;
-  const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=5`, 1);
-  let supertype = null;
-  if (data && data.data) {
-    // Prefer the exact set+number match if present, else the first hit.
-    const setMap = await getSetMap();
-    const apiSet = setMap[(c.setCode || "").toLowerCase()];
-    const hit =
-      (c.number && apiSet && data.data.find((x) => x.number === c.number && (x.set && x.set.id === apiSet))) ||
-      data.data.find((x) => !c.number || x.number === c.number) ||
-      data.data[0];
-    if (hit) supertype = hit.supertype;
+  let cat = "pokemon";
+  const setMap = await getSetMap();
+  const apiSet = setMap[(c.setCode || "").toLowerCase()];
+  if (apiSet) {
+    // One bulk request classifies every card in the set.
+    const setCats = await resolveSetSupertypes(apiSet);
+    if (setCats[c.number]) cat = setCats[c.number];
   }
 
-  const cat =
-    (supertype || "").toLowerCase() === "trainer"
-      ? "support"
-      : (supertype || "").toLowerCase() === "pokémon" || (supertype || "").toLowerCase() === "pokemon"
-        ? "pokemon"
-        : "pokemon";
+  // Fallback: single name-based lookup if the set path gave us nothing.
+  if (c.category !== "energy" && !(apiSet && getSetSupertpHas(apiSet, c.number))) {
+    const q = `name:"${c.name}"`;
+    const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=5`, 1);
+    if (data && data.data) {
+      const hit =
+        data.data.find((x) => !c.number || x.number === c.number) || data.data[0];
+      if (hit) {
+        const m = mapSupertype(hit.supertype);
+        if (m !== "pokemon") cat = m;
+      }
+    }
+  }
 
   putSupertypeCache(key, cat);
   return cat;
+}
+
+function getSetSupertpHas(setId, number) {
+  const c = getSetSupertypeCache();
+  return !!(c[setId] && c[setId].cards && c[setId].cards[number]);
 }
 
 // ---- Build an <img> for a card with automatic API fallback ----
