@@ -36,12 +36,13 @@ let queue = Promise.resolve();
 const MIN_GAP = 300;
 const MAX_RETRIES = 5;
 
-function throttledFetch(url) {
+function throttledFetch(url, maxRetries) {
+  const limit = typeof maxRetries === "number" ? maxRetries : MAX_RETRIES;
   const run = async () => {
     const wait = Math.max(0, lastRequest + MIN_GAP - Date.now());
     if (wait > 0) await sleep(wait);
     lastRequest = Date.now();
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < limit; attempt++) {
       try {
         const resp = await fetch(url);
         if (resp.status === 429 || resp.status === 500 || resp.status === 502) {
@@ -225,8 +226,10 @@ async function resolveCardCategory(c) {
 
   // Name-based lookup is the reliable, fast primary. Supertype is consistent
   // per card name, so this gives accurate Pokémon/Trainer classification.
+  // This is a best-effort cosmetic grouping: one quick attempt, no long retry
+  // chains, since a miss just falls back to "pokemon".
   const q = `name:"${c.name}"`;
-  const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=5`);
+  const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=5`, 1);
   let supertype = null;
   if (data && data.data) {
     // Prefer the exact set+number match if present, else the first hit.

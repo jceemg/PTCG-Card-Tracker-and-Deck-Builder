@@ -124,11 +124,12 @@ async function renderDetailList() {
   for (const c of current.cards) {
     if (!uniques.has(cardKey(c))) uniques.set(cardKey(c), c);
   }
-  const classified = [];
-  for (const c of Array.from(uniques.values())) {
-    const category = await resolveCardCategory(c);
-    classified.push({ c, category });
-  }
+  const classified = await Promise.all(
+    Array.from(uniques.values()).map(async (c) => ({
+      c,
+      category: await resolveCardCategory(c),
+    }))
+  );
 
   const order = ["pokemon", "support", "energy"];
   const titles = { pokemon: "Pokémon", support: "Support", energy: "Energy" };
