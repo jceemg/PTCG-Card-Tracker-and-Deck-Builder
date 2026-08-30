@@ -26,6 +26,24 @@ function saveStorage(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+// Storage entries hold {count, category}. Legacy (plain-number) entries are
+// normalized here so we can group by category without migrating every card.
+function storageEntry(v) {
+  if (v && typeof v === "object" && typeof v.count === "number") {
+    return { count: v.count, category: v.category || null };
+  }
+  if (typeof v === "number") return { count: v, category: null };
+  return { count: 0, category: null };
+}
+
+// Display order: Pokémon first, then Trainer (Support), then Energy. Cards with
+// no known category (added before categories existed) come last.
+const CATEGORY_RANK = { pokemon: 0, trainer: 1, energy: 2 };
+function categoryRank(category) {
+  return category in CATEGORY_RANK ? CATEGORY_RANK[category] : 3;
+}
+const CATEGORY_LABEL = { 0: "Pokémon", 1: "Trainer / Support", 2: "Energy", 3: "Other" };
+
 // ---------- Build a card object from a storage key "name|setCode|number" ----------
 function cardFromKey(key) {
   const [name, setCode, number] = key.split("|");
@@ -45,8 +63,14 @@ async function renderCards() {
   }
   noCards.classList.add("hidden");
 
+  // Include each card's category so we can group them, then order by
+  // Pokémon -> Trainer -> Energy -> Other. Unknown-category (legacy) cards
+  // land in the "Other" group at the end.
   const cards = keys
-    .map((key) => ({ key, count: storage[key] || 0 }))
+    .map((key) => {
+      const entry = storageEntry(storage[key]);
+      return { key, count: entry.count, category: entry.category };
+    })
     .filter((c) => c.count > 0)
     .filter((c) => {
       if (!cardsQuery) return true;
@@ -64,6 +88,20 @@ async function renderCards() {
   // Show a loading indicator while images resolve on the first pass.
   if (cardsGrid.dataset.loaded !== "1") {
     cardsGrid.innerHTML = '<div class="loading">Loading your cards&hellip;</div>';
+  }
+
+  cards.sort((a, b) => {
+    const dr = categoryRank(a.category) - categoryRank(b.category);
+    if (dr !== 0) return dr;
+    return a.key.localeCompare(b.key);
+  });
+
+  // Group cards by rank so we can insert a heading before each block.
+  const groups = new Map(); // rank -> [cards]
+  for (const c of cards) {
+    const rank = categoryRank(c.category);
+    if (!groups.has(rank)) groups.set(rank, []);
+    groups.get(rank).push(c);
   }
 
   // Resolve every card image in parallel so a slow card doesn't block the rest.
@@ -104,8 +142,20 @@ async function renderCards() {
     })
   );
 
+  // Build groups in order, each with a heading, into a fragment.
   const frag = document.createDocumentFragment();
-  for (const card of ready) frag.appendChild(card);
+  const cardByKey = new Map();
+  cards.forEach((c, i) => cardByKey.set(c.key, ready[i]));
+  const ranks = [...groups.keys()].sort((a, b) => a - b);
+  for (const rank of ranks) {
+    const heading = document.createElement("div");
+    heading.className = "cards-section";
+    heading.textContent = CATEGORY_LABEL[rank];
+    frag.appendChild(heading);
+    for (const c of groups.get(rank)) {
+      frag.appendChild(cardByKey.get(c.key));
+    }
+  }
   cardsGrid.innerHTML = "";
   cardsGrid.appendChild(frag);
   cardsGrid.dataset.loaded = "1";
@@ -131,10 +181,11 @@ cardsGrid.addEventListener("click", async (e) => {
   const delta = parseInt(btn.dataset.delta, 10);
 
   const storage = loadStorage();
-  let cur = storage[key] || 0;
+  const entry = storageEntry(storage[key]);
+  let cur = entry.count;
   cur = Math.max(0, cur + delta);
   if (cur === 0) delete storage[key];
-  else storage[key] = cur;
+  else storage[key] = { count: cur, category: entry.category };
   saveStorage(storage);
 
   await renderCards();

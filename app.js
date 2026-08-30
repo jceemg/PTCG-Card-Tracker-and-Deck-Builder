@@ -40,6 +40,24 @@ function saveStorage(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+// A storage entry holds {count, category}. Legacy entries (plain numbers) are
+// normalized on read so we can sort by category without migrating every card.
+function storageEntry(v) {
+  if (v && typeof v === "object" && typeof v.count === "number") {
+    return { count: v.count, category: v.category || null };
+  }
+  if (typeof v === "number") return { count: v, category: null };
+  return { count: 0, category: null };
+}
+
+function storageCount(storage, key) {
+  return storageEntry(storage[key]).count;
+}
+
+function setStorageEntry(storage, key, count, category) {
+  storage[key] = { count, category: category || null };
+}
+
 // ---------- Saved decks (localStorage) ----------
 function loadDecks() {
   try {
@@ -60,6 +78,19 @@ function isEnergyLine(line) {
   return /energy/i.test(line);
 }
 
+// Detect a section heading line (e.g. "Pokémon: 21", "Trainer:", "ENERGY - 6")
+// and return the matching category ("pokemon", "trainer", or "energy"), or
+// null if the line isn't a heading. Card lines don't match these patterns.
+function sectionOfLine(line) {
+  const m = line.match(/^\s*([A-ZÉeé]+)\s*[:.\-]?\s*\d*\s*$/i);
+  if (!m) return null;
+  const h = m[1].toLowerCase().replace("é", "e");
+  if (/^(pok[eé]mon|pokemon)$/i.test(h)) return "pokemon";
+  if (/^(trainer|trainers|supporter|supporters|item|items|stadium|stadiums|tool|tools|instant|instants)$/.test(h)) return "trainer";
+  if (/^energy$/.test(h)) return "energy";
+  return null;
+}
+
 function parseDeckList(text) {
   const cards = [];
   const lines = (text || "")
@@ -67,7 +98,16 @@ function parseDeckList(text) {
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 
+  // Cards are categorized by the section heading that precedes them (e.g.
+  // "Pokémon:", "Trainer:", "Energy:"). If no heading was seen, guess from the
+  // line (Energy matches by name; anything else defaults to Pokémon).
+  let section = null;
   for (const line of lines) {
+    const heading = sectionOfLine(line);
+    if (heading) {
+      section = heading;
+      continue;
+    }
     // Format: <count> <Card Name> <SETCODE> <number>
     // The set code is a short fully-uppercase token (e.g. SCR, MEG, SSP).
     const m = line.match(/^(\d+)\s+(.+?)\s+([A-Z]{2,4})\s+([A-Za-z0-9]+)$/);
@@ -76,7 +116,7 @@ function parseDeckList(text) {
     const name = m[2].replace(/['\u2019]/g, "'");
     const setCode = m[3];
     const number = m[4];
-    const category = isEnergyLine(line) ? "energy" : "pokemon";
+    const category = section || (isEnergyLine(line) ? "energy" : "pokemon");
     cards.push({ name, setCode, number, count, category });
   }
 
@@ -93,7 +133,7 @@ function renderTargets() {
   const storage = loadStorage();
   const rows = parsedCards.map((c) => {
     const key = cardKey(c);
-    const owned = storage[key] || 0;
+    const owned = storageCount(storage, key);
     return { card: c, owned, key };
   });
 
@@ -145,7 +185,7 @@ function applyToStorage() {
   const exclude = excludeEnergy.checked;
   const rows = parsedCards.map((c) => {
     const key = cardKey(c);
-    return { card: c, key, owned: storage[key] || 0 };
+    return { card: c, key, owned: storageCount(storage, key) };
   });
 
   let added = 0;
@@ -159,14 +199,14 @@ function applyToStorage() {
         energies++;
         continue;
       }
-      storage[r.key] = c.count;
+      setStorageEntry(storage, r.key, c.count, "energy");
       continue;
     }
     const toAdd = Math.max(0, c.count - r.owned);
     if (toAdd === 0) {
       already++;
     } else {
-      storage[r.key] = r.owned + toAdd;
+      setStorageEntry(storage, r.key, r.owned + toAdd, c.category);
       added += toAdd;
     }
   }
@@ -186,7 +226,7 @@ function renderStorage() {
   const storage = loadStorage();
   const query = storageQuery.trim().toLowerCase();
   const entries = Object.entries(storage)
-    .filter(([key, count]) => {
+    .filter(([key, val]) => {
       if (!query) return true;
       // Match against the visible label (name + set + number) so searching by
       // card name, set code, or collector number all work.
@@ -205,7 +245,8 @@ function renderStorage() {
       <tr><th>Card</th><th>Owned</th></tr>
     </thead>`;
   const tbody = entries
-    .map(([key, count]) => {
+    .map(([key, val]) => {
+      const count = storageCount(storage, key);
       const [name, setCode, num] = key.split("|");
       const label = num ? `${name} ${setCode} ${num}` : `${name} ${setCode}`;
       return `<tr>
@@ -285,13 +326,14 @@ storageList.addEventListener("click", (e) => {
   const key = btn.dataset.key;
   const delta = parseInt(btn.dataset.delta, 10);
   const storage = loadStorage();
-  let cur = storage[key] || 0;
+  const entry = storageEntry(storage[key]);
+  let cur = entry.count;
   if (delta === 0) {
     delete storage[key];
   } else {
     cur = Math.max(0, cur + delta);
     if (cur === 0) delete storage[key];
-    else storage[key] = cur;
+    else setStorageEntry(storage, key, cur, entry.category);
   }
   saveStorage(storage);
   renderStorage();

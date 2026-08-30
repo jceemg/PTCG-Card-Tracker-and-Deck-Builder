@@ -51,6 +51,24 @@ function saveStorage(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+// Storage entries hold {count, category}. Legacy (plain-number) entries are
+// normalized here so we can read counts and preserve categories consistently.
+function storageEntry(v) {
+  if (v && typeof v === "object" && typeof v.count === "number") {
+    return { count: v.count, category: v.category || null };
+  }
+  if (typeof v === "number") return { count: v, category: null };
+  return { count: 0, category: null };
+}
+
+function storageCount(storage, key) {
+  return storageEntry(storage[key]).count;
+}
+
+function setStorageEntry(storage, key, count, category) {
+  storage[key] = { count, category: category || null };
+}
+
 function loadDecks() {
   try {
     const raw = localStorage.getItem(DECKS_KEY);
@@ -139,7 +157,7 @@ function renderDetailList() {
     </thead>`;
   const tbody = current.cards
     .map((c) => {
-      const owned = storage[cardKey(c)] || 0;
+      const owned = storageCount(storage, cardKey(c));
       const toAdd = c.category === "energy" ? 0 : Math.max(0, c.count - owned);
       let tag;
       if (c.category === "energy") {
@@ -260,10 +278,11 @@ function removeFromStorage() {
   }
   let removed = 0;
   for (const [k, amount] of counts) {
-    const cur = storage[k] || 0;
+    const entry = storageEntry(storage[k]);
+    const cur = entry.count;
     const next = cur - amount;
     if (next <= 0) delete storage[k];
-    else storage[k] = next;
+    else setStorageEntry(storage, k, next, entry.category);
     removed += Math.min(cur, amount);
   }
   saveStorage(storage);
@@ -284,12 +303,12 @@ function applyToStorage() {
       continue;
     }
     const k = cardKey(c);
-    const owned = storage[k] || 0;
+    const owned = storageCount(storage, k);
     const toAdd = Math.max(0, c.count - owned);
     if (toAdd === 0) {
       already++;
     } else {
-      storage[k] = owned + toAdd;
+      setStorageEntry(storage, k, owned + toAdd, c.category);
       added += toAdd;
     }
   }
