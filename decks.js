@@ -27,6 +27,10 @@ const sendPrint = $("#send-print");
 let decks = [];
 let current = null; // the open deck
 
+// Rendered image HTML cached per deck name, so switching back to a deck you
+// already opened is instant instead of re-loading every image.
+const imagesHtmlCache = {};
+
 // ---------- Storage ----------
 function loadStorage() {
   try {
@@ -114,6 +118,11 @@ async function renderDetail() {
   if (!current) return;
   detailTitle.textContent = current.name;
   renderDetailList();
+  const cached = imagesHtmlCache[current.name];
+  if (cached) {
+    detailImages.innerHTML = cached;
+    return;
+  }
   await renderDetailImages();
 }
 
@@ -145,11 +154,18 @@ async function renderDetailImages() {
   for (const c of current.cards) {
     if (!uniques.has(cardKey(c))) uniques.set(cardKey(c), c);
   }
+  const items = Array.from(uniques.values());
+
+  // Resolve every image in parallel so one slow card (e.g. a promo "me" set
+  // that needs an API lookup) doesn't block the rest of the deck.
+  const ready = await Promise.all(
+    items.map(async (c) => ({ c, img: await createCardImg(c) }))
+  );
+
   const frag = document.createDocumentFragment();
-  for (const c of Array.from(uniques.values())) {
+  for (const { c, img } of ready) {
     const card = document.createElement("div");
     card.className = "mini-card";
-    const img = await createCardImg(c);
     card.appendChild(img);
     if (c.count && c.count > 0) {
       const badge = document.createElement("div");
@@ -165,6 +181,7 @@ async function renderDetailImages() {
   }
   detailImages.innerHTML = "";
   detailImages.appendChild(frag);
+  imagesHtmlCache[current.name] = detailImages.innerHTML;
 }
 
 // ResolveCardImage is defined in api.js (shared).
@@ -274,7 +291,12 @@ renameBtn.addEventListener("click", () => {
     setMsg(detailMsg, `A deck named "${trimmed}" already exists.`, "err");
     return;
   }
+  const oldName = current.name;
   current.name = trimmed;
+  if (imagesHtmlCache[oldName]) {
+    imagesHtmlCache[trimmed] = imagesHtmlCache[oldName];
+    delete imagesHtmlCache[oldName];
+  }
   saveDecks(decks);
   detailTitle.textContent = trimmed;
   setMsg(detailMsg, "Deck renamed.", "ok");
@@ -294,6 +316,7 @@ removeStorageBtn.addEventListener("click", removeFromStorage);
 reloadImagesBtn.addEventListener("click", async () => {
   if (!current) return;
   clearImgCache(current.cards);
+  delete imagesHtmlCache[current.name];
   await renderDetailImages();
   setMsg(detailMsg, "Card images reloaded.", "ok");
 });
