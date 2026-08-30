@@ -8,7 +8,13 @@
 </head>
 <body>
   <header>
-    <h1>PTCG Card Tracker &amp; Deck Builder</h1>
+    <nav class="topnav">
+      <span class="brand">PTCG Tracker &amp; Deck Builder</span>
+      <span class="links">
+        <a href="index.html" class="active">Tracker</a>
+        <a href="decks.html">My Decks</a>
+      </span>
+    </nav>
     <p class="subtitle">Paste a deck list &mdash; we check your card storage, top up what you're missing, and build a duplicate-free proxy print sheet.</p>
   </header>
 
@@ -32,6 +38,7 @@
       <div id="summary-targets" class="table-wrap"></div>
       <div class="controls">
         <button id="apply-btn" class="primary">Apply to Card Storage (Top Up Missing)</button>
+        <button id="save-deck-btn">Save as Deck</button>
         <button id="print-btn">Build Proxy Print Sheet</button>
       </div>
       <div id="result-msg"></div>

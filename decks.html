@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Decks — PTCG Card Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <nav class="topnav">
+      <span class="brand">PTCG Tracker &amp; Deck Builder</span>
+      <span class="links">
+        <a href="index.html">Tracker</a>
+        <a href="decks.html" class="active">My Decks</a>
+      </span>
+    </nav>
+    <p class="subtitle">Your saved decks. Click a thumbnail to see the full list and card images.</p>
+  </header>
+
+  <main>
+    <section class="panel" id="decks-panel">
+      <h2>My Decks</h2>
+      <div id="decks-grid" class="decks-grid"></div>
+      <p id="no-decks" class="hint hidden">No decks saved yet. Go to the <a href="index.html">Tracker</a>, paste a deck list, and hit "Save as Deck".</p>
+    </section>
+
+    <!-- Deck detail -->
+    <section class="panel hidden" id="detail-panel">
+      <div class="detail-head">
+        <h2 id="detail-title">Deck</h2>
+        <div class="controls">
+          <button id="back-btn">&larr; Back to Decks</button>
+          <button id="rename-btn">Rename</button>
+          <button id="remove-storage-btn" class="danger">Remove Deck Cards from Storage</button>
+          <button id="print-btn" class="primary">Print Proxy Sheet</button>
+          <button id="delete-deck-btn" class="danger">Delete Deck</button>
+        </div>
+      </div>
+      <div id="detail-msg"></div>
+      <h3>Full List</h3>
+      <div id="detail-list" class="table-wrap"></div>
+      <h3>Card Images</h3>
+      <div id="detail-images" class="card-imgs"></div>
+    </section>
+
+    <!-- Print sheet -->
+    <section class="panel hidden" id="print-panel">
+      <h2>Proxy Print Sheet</h2>
+      <p class="hint">One copy of each unique card. No duplicates.</p>
+      <div id="print-grid" class="print-grid"></div>
+      <div class="controls">
+        <button id="send-print">Print</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="decks.js"></script>
+</body>
+</html>

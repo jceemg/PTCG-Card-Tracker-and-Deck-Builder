@@ -3,6 +3,7 @@
 // ---------- Storage keys ----------
 const STORAGE_KEY = "ptcg.storage.v1";
 const EXCLUDE_ENERGY_KEY = "ptcg.excludeEnergy";
+const DECKS_KEY = "ptcg.decks.v1";
 
 // ---------- Element refs ----------
 const $ = (sel) => document.querySelector(sel);
@@ -13,6 +14,7 @@ const parseBtn = $("#parse-btn");
 const summaryPanel = $("#summary-panel");
 const summaryTargets = $("#summary-targets");
 const applyBtn = $("#apply-btn");
+const saveDeckBtn = $("#save-deck-btn");
 const printBtn = $("#print-btn");
 const resultMsg = $("#result-msg");
 const storagePanel = $("#storage-panel");
@@ -38,6 +40,21 @@ function loadStorage() {
 
 function saveStorage(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ---------- Saved decks (localStorage) ----------
+function loadDecks() {
+  try {
+    const raw = localStorage.getItem(DECKS_KEY);
+    const data = raw ? JSON.parse(raw) : [];
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveDecks(decks) {
+  localStorage.setItem(DECKS_KEY, JSON.stringify(decks));
 }
 
 // ---------- Deck list parser ----------
@@ -284,6 +301,33 @@ parseBtn.addEventListener("click", () => {
 applyBtn.addEventListener("click", () => {
   applyToStorage();
   renderStorage();
+});
+
+saveDeckBtn.addEventListener("click", () => {
+  if (!parsedCards || parsedCards.length === 0) return;
+  const name = prompt("Name this deck:");
+  if (!name || !name.trim()) return;
+  const trimmed = name.trim();
+  const decks = loadDecks();
+  if (decks.some((d) => d.name.toLowerCase() === trimmed.toLowerCase())) {
+    const ok = confirm(
+      `A deck named "${trimmed}" already exists. Overwrite it?`
+    );
+    if (!ok) return;
+    for (let i = 0; i < decks.length; i++) {
+      if (decks[i].name.toLowerCase() === trimmed.toLowerCase()) {
+        decks[i].cards = parsedCards;
+        decks[i].savedAt = Date.now();
+        break;
+      }
+    }
+  } else {
+    decks.push({ name: trimmed, cards: parsedCards, savedAt: Date.now() });
+  }
+  saveDecks(decks);
+  resultMsg.className = "ok";
+  resultMsg.textContent = `Deck "${trimmed}" saved. You can view it on the My Decks page.`;
+  showMsg(resultMsg);
 });
 
 printBtn.addEventListener("click", buildPrintSheet);

@@ -33,6 +33,27 @@ header {
 header h1 { margin: 0 0 4px; font-size: 24px; }
 .subtitle { margin: 0; color: var(--muted); font-size: 14px; }
 
+.topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.topnav .brand {
+  font-size: 20px;
+  font-weight: 700;
+}
+.topnav .links { display: flex; gap: 18px; }
+.topnav .links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 15px;
+  padding: 6px 4px;
+  border-bottom: 2px solid transparent;
+}
+.topnav .links a:hover { color: var(--text); }
+.topnav .links a.active { color: var(--text); border-bottom-color: var(--accent); }
+
 main {
   max-width: 960px;
   margin: 0 auto;
@@ -174,3 +195,74 @@ tbody tr:last-child td { border-bottom: none; }
   font-size: 13px;
   margin-top: 8px;
 }
+
+/* Decks page */
+.decks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 16px;
+}
+
+.deck-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel-2);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.deck-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+
+.deck-thumb {
+  aspect-ratio: 63 / 88;
+  background: #0e1217;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.deck-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.thumb-placeholder { color: var(--muted); font-size: 14px; }
+
+.deck-name {
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-head h2 { font-size: 22px; }
+.detail-head .controls { justify-content: flex-start; }
+#detail-panel h3 { margin: 22px 0 10px; }
+
+.card-imgs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+.mini-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel-2);
+  text-align: center;
+}
+.mini-card img { width: 100%; display: block; }
+.mini-card .label {
+  padding: 5px 6px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#detail-msg { margin: 10px 0 0; }
+#detail-msg.ok { color: var(--green); }
+#detail-msg.err { color: var(--red); }
+
+.hint a { color: var(--accent); }
+
