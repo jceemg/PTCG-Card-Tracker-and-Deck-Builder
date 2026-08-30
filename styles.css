@@ -182,13 +182,23 @@ tbody tr:last-child td { border-bottom: none; }
   color: var(--muted);
 }
 
-/* Print styles: only the print sheet */
+/* Print styles: only the card images, no title/loading/labels, tight grid */
 @media print {
   body * { visibility: hidden; }
   #print-panel, #print-panel * { visibility: visible; }
-  #print-panel { position: absolute; inset: 0; box-shadow: none; }
-  .print-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .controls { display: none; }
+  #print-panel { position: absolute; inset: 0; box-shadow: none; margin: 0; padding: 0; border: none; }
+  #print-panel h2,
+  #print-panel .hint,
+  #print-panel .count-badge,
+  #print-panel .print-card .label { display: none !important; }
+  #print-panel .controls { display: none; }
+  #print-panel .print-card { border: none; border-radius: 0; margin: 0; padding: 0; }
+  .print-grid {
+    grid-template-columns: repeat(auto-fill, minmax(2.4in, 1fr));
+    gap: 2px;
+    margin: 0;
+  }
+  .print-card img { width: 100%; display: block; }
 }
 
 .err-msg {
