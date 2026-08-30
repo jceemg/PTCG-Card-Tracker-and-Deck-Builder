@@ -12,6 +12,7 @@ const PTCG_API = "https://api.pokemontcg.io/v2";
 const IMG_CDN = "https://images.pokemontcg.io";
 const SETMAP_KEY = "ptcg.setmap.v1";
 const IMGCACHE_KEY = "ptcg.imgcache.v1";
+const SUPERTYPE_KEY = "ptcg.supertp.v1";
 const CACHE_MS = 1000 * 60 * 60 * 24; // 24h
 
 // Built-in map of common set abbreviations -> API set.id, so the first load
@@ -195,6 +196,63 @@ async function findImageViaApi(c) {
 
 function imageOf(card) {
   return card.images && (card.images.large || card.images.small) || null;
+}
+
+// ---- Supertype classification (pokemon / support / energy) ----
+// Cached in localStorage so we only hit the API once per unique card.
+
+function getSupertypeCache() {
+  return loadCache(SUPERTYPE_KEY, {});
+}
+
+function putSupertypeCache(key, cat) {
+  const c = getSupertypeCache();
+  c[key] = cat;
+  saveCache(SUPERTYPE_KEY, c);
+}
+
+// Return "pokemon", "support" or "energy" for a card.
+async function resolveCardCategory(c) {
+  const key = cardKey(c);
+  const cache = getSupertypeCache();
+  if (cache[key]) return cache[key];
+
+  // Energy is determinable from the deck line itself.
+  if ((c.category || "").toLowerCase() === "energy") {
+    putSupertypeCache(key, "energy");
+    return "energy";
+  }
+
+  const setMap = await getSetMap();
+  const apiSet = setMap[(c.setCode || "").toLowerCase()];
+  let supertype = null;
+
+  if (apiSet && c.number) {
+    const q = `set.id:${apiSet} number:${c.number}`;
+    const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=1`);
+    if (data && data.data && data.data.length > 0) supertype = data.data[0].supertype;
+  }
+
+  if (!supertype) {
+    const q = `name:"${c.name}"`;
+    const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=5`);
+    if (data && data.data) {
+      const hit = c.number
+        ? data.data.find((x) => x.number === c.number) || data.data[0]
+        : data.data[0];
+      if (hit) supertype = hit.supertype;
+    }
+  }
+
+  const cat =
+    (supertype || "").toLowerCase() === "trainer"
+      ? "support"
+      : (supertype || "").toLowerCase() === "pokémon" || (supertype || "").toLowerCase() === "pokemon"
+        ? "pokemon"
+        : "pokemon";
+
+  putSupertypeCache(key, cat);
+  return cat;
 }
 
 // ---- Build an <img> for a card with automatic API fallback ----
