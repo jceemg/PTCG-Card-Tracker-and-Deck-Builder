@@ -29,6 +29,11 @@ const BUILTIN_SETMAP = {
   asc: "me2pt5",
 };
 
+// ptcgoCodes whose API set.id starts with "me" (promo sets hosted on scrydex,
+// not the pokemontcg.io CDN). Used to reject stale CDN URLs without having to
+// await the (async) set map on the hot per-card image path.
+const ME_PTCGO_CODES = new Set(["meg", "pfl", "por", "cri", "pbl", "asc"]);
+
 // ---- Rate limiter (falls back for API lookups) ----
 let lastRequest = 0;
 let queue = Promise.resolve();
@@ -83,34 +88,45 @@ function saveCache(key, data) {
 }
 
 // ---- Set map: ptcgoCode (lowercase) -> API set.id ----
-async function getSetMap() {
-  const map = Object.assign({}, BUILTIN_SETMAP);
-  const cached = loadCache(SETMAP_KEY, null);
+// The result is memoized so the many cards being resolved at once share a
+// single map lookup instead of each re-reading localStorage / re-checking the
+// cache. Refreshes are still fired in the background, never blocking the UI.
+let setMapPromise = null;
+function getSetMap() {
+  if (setMapPromise) return setMapPromise;
 
-  // Refresh the API set list occasionally, but never block on it.
-  if (cached && Date.now() - cached.fetchedAt < CACHE_MS) {
-    return Object.assign(map, cached.map);
-  }
+  const resolve = async () => {
+    const map = Object.assign({}, BUILTIN_SETMAP);
+    const cached = loadCache(SETMAP_KEY, null);
 
-  // Fire the refresh in the background; return with what we have now.
-  (async () => {
-    try {
-      const fresh = {};
-      let page = 1;
-      for (let tries = 0; tries < 3; tries++) {
-        const r = await throttledFetch(`${PTCG_API}/sets?page=${page}&pageSize=100`);
-        if (!r || !r.data) break;
-        for (const s of r.data) fresh[s.ptcgoCode.toLowerCase()] = s.id;
-        if (r.data.length < 100) break;
-        page++;
-      }
-      saveCache(SETMAP_KEY, { fetchedAt: Date.now(), map: Object.assign({}, BUILTIN_SETMAP, fresh) });
-    } catch (e) {
-      /* keep current set map */
+    // Refresh the API set list occasionally, but never block on it.
+    if (cached && Date.now() - cached.fetchedAt < CACHE_MS) {
+      return Object.assign(map, cached.map);
     }
-  })();
 
-  return Object.assign(map, cached ? cached.map : {});
+    // Fire the refresh in the background; return with what we have now.
+    (async () => {
+      try {
+        const fresh = {};
+        let page = 1;
+        for (let tries = 0; tries < 3; tries++) {
+          const r = await throttledFetch(`${PTCG_API}/sets?page=${page}&pageSize=100`);
+          if (!r || !r.data) break;
+          for (const s of r.data) fresh[s.ptcgoCode.toLowerCase()] = s.id;
+          if (r.data.length < 100) break;
+          page++;
+        }
+        saveCache(SETMAP_KEY, { fetchedAt: Date.now(), map: Object.assign({}, BUILTIN_SETMAP, fresh) });
+      } catch (e) {
+        /* keep current set map */
+      }
+    })();
+
+    return Object.assign(map, cached ? cached.map : {});
+  };
+
+  setMapPromise = resolve();
+  return setMapPromise;
 }
 
 // ---- Image cache: card key -> url ----
@@ -170,15 +186,15 @@ async function resolveCardImage(c) {
   const key = cardKey(c);
   const imgCache = getImgCache();
 
-  // 1. Known good cached URL.
-  if (imgCache[key] && imgCache[key] !== "NULL") {
-    // Ignore stale CDN URLs for promo "me" sets (they 404; scrydex is correct).
-    const setMap0 = await getSetMap();
-    const id0 = (c.setCode || "").toLowerCase();
-    const apiSet0 = setMap0[id0];
-    const isMeSet = (apiSet0 || "").toLowerCase().startsWith("me");
-    const isStandardCdn = imgCache[key].indexOf(IMG_CDN + "/") === 0;
-    if (!(isMeSet && isStandardCdn)) return imgCache[key];
+  // 1. Known good cached URL. This is the common case and must be fast, so we
+  //    avoid awaiting the set map here. The only special case is stale CDN URLs
+  //    for promo "me" sets (they 404; scrydex is correct), which we can detect
+  //    synchronously from the ptcgoCode.
+  const cachedUrl = imgCache[key];
+  if (cachedUrl && cachedUrl !== "NULL") {
+    const isMeSet = ME_PTCGO_CODES.has((c.setCode || "").toLowerCase());
+    const isStandardCdn = cachedUrl.indexOf(IMG_CDN + "/") === 0;
+    if (!(isMeSet && isStandardCdn)) return cachedUrl;
   }
   // 2. Known-bad (already tried API and failed).
   if (imgCache[key] === "NULL") return null;
