@@ -207,6 +207,12 @@ async function buildPrintSheet() {
       const card = document.createElement("div");
       card.className = "print-card";
       card.appendChild(img);
+      if (c.count && c.count > 0) {
+        const badge = document.createElement("div");
+        badge.className = "count-badge";
+        badge.textContent = `${c.count}x`;
+        card.appendChild(badge);
+      }
       const label = document.createElement("div");
       label.className = "label";
       label.textContent = `${c.name} ${c.setCode}`;
