@@ -194,7 +194,7 @@ tbody tr:last-child td { border-bottom: none; }
   #print-panel .controls { display: none; }
   #print-panel .print-card { border: none; border-radius: 0; margin: 0; padding: 0; }
   .print-grid {
-    grid-template-columns: repeat(auto-fill, minmax(2.4in, 1fr));
+    grid-template-columns: repeat(6, 1fr);
     gap: 2px;
     margin: 0;
   }
