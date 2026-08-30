@@ -344,7 +344,7 @@ removeStorageBtn.addEventListener("click", removeFromStorage);
 
 reloadImagesBtn.addEventListener("click", async () => {
   if (!current) return;
-  clearImgCache(current.cards);
+  clearBrokenImgCache(current.cards);
   delete imagesHtmlCache[current.name];
   await renderDetailImages();
   setMsg(detailMsg, "Card images reloaded.", "ok");
