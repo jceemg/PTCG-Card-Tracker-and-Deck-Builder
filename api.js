@@ -223,25 +223,20 @@ async function resolveCardCategory(c) {
     return "energy";
   }
 
-  const setMap = await getSetMap();
-  const apiSet = setMap[(c.setCode || "").toLowerCase()];
+  // Name-based lookup is the reliable, fast primary. Supertype is consistent
+  // per card name, so this gives accurate Pokémon/Trainer classification.
+  const q = `name:"${c.name}"`;
+  const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=5`);
   let supertype = null;
-
-  if (apiSet && c.number) {
-    const q = `set.id:${apiSet} number:${c.number}`;
-    const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=1`);
-    if (data && data.data && data.data.length > 0) supertype = data.data[0].supertype;
-  }
-
-  if (!supertype) {
-    const q = `name:"${c.name}"`;
-    const data = await throttledFetch(`${PTCG_API}/cards?q=${encodeURIComponent(q)}&pageSize=5`);
-    if (data && data.data) {
-      const hit = c.number
-        ? data.data.find((x) => x.number === c.number) || data.data[0]
-        : data.data[0];
-      if (hit) supertype = hit.supertype;
-    }
+  if (data && data.data) {
+    // Prefer the exact set+number match if present, else the first hit.
+    const setMap = await getSetMap();
+    const apiSet = setMap[(c.setCode || "").toLowerCase()];
+    const hit =
+      (c.number && apiSet && data.data.find((x) => x.number === c.number && (x.set && x.set.id === apiSet))) ||
+      data.data.find((x) => !c.number || x.number === c.number) ||
+      data.data[0];
+    if (hit) supertype = hit.supertype;
   }
 
   const cat =
