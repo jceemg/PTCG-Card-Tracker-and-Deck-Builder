@@ -5,8 +5,9 @@
 // Deck lists use set abbreviations (e.g. SCR) which correspond to the API's
 // ptcgoCode. We map those abbreviations to an API set.id, then build the image
 // URL directly from the pokemontcg.io CDN (no API call) for the common case.
-// Only cards whose images aren't on the CDN (a few promo "me" sets hosted on
-// scrydex.com) need a slow API lookup, which callers trigger on img error.
+// A few promo "me" sets (me3-me5, me2pt5) still aren't on the CDN and need a
+// slow API lookup, which callers trigger on img error. me1/me2 are now on the
+// CDN and use the fast path.
 
 const PTCG_API = "https://api.pokemontcg.io/v2";
 const IMG_CDN = "https://images.pokemontcg.io";
@@ -29,10 +30,11 @@ const BUILTIN_SETMAP = {
   asc: "me2pt5",
 };
 
-// ptcgoCodes whose API set.id starts with "me" (promo sets hosted on scrydex,
-// not the pokemontcg.io CDN). Used to reject stale CDN URLs without having to
-// await the (async) set map on the hot per-card image path.
-const ME_PTCGO_CODES = new Set(["meg", "pfl", "por", "cri", "pbl", "asc"]);
+// Promo "me" sets whose images are NOT served by the pokemontcg.io CDN. Only
+// these still need the slow API/scrydex fallback; the others (me1, me2) now
+// exist on the CDN and can use the fast direct-URL path. The stored keys are
+// the ptcgoCodes (lowercase) from BUILTIN_SETMAP.
+const ME_CDN_MISSING = new Set(["por", "cri", "pbl", "asc"]);
 
 // ---- Rate limiter (falls back for API lookups) ----
 let lastRequest = 0;
@@ -171,10 +173,9 @@ function cardKey(c) {
 function directImageUrl(c, setMap) {
   const id = (c.setCode || "").toLowerCase();
   const apiSet = setMap[id];
-  // Promo "me" sets (me1-me5, me2pt5) are not on the images.pokemontcg.io
-  // CDN; they 404 there and live on scrydex.com instead. Skip the direct URL
-  // so we go straight to the reliable API/scrydex lookup.
-  if ((apiSet || "").toLowerCase().startsWith("me")) return null;
+  // A few promo "me" sets (me3-me5, me2pt5) are still not on the CDN and 404
+  // there; they need the slow API/scrydex lookup. me1/me2 now work on the CDN.
+  if (ME_CDN_MISSING.has(id)) return null;
   if (apiSet && c.number) {
     return `${IMG_CDN}/${apiSet}/${c.number}_hires.png`;
   }
@@ -185,27 +186,30 @@ function directImageUrl(c, setMap) {
 async function resolveCardImage(c) {
   const key = cardKey(c);
   const imgCache = getImgCache();
+  const code = (c.setCode || "").toLowerCase();
 
   // 1. Known good cached URL. This is the common case and must be fast, so we
-  //    avoid awaiting the set map here. The only special case is stale CDN URLs
-  //    for promo "me" sets (they 404; scrydex is correct), which we can detect
-  //    synchronously from the ptcgoCode.
+  //    avoid awaiting the set map here. The only special case is stale CDN
+  //    URLs for the few promo sets still missing from the CDN, which we can
+  //    detect synchronously from the ptcgoCode.
   const cachedUrl = imgCache[key];
   if (cachedUrl && cachedUrl !== "NULL") {
-    const isMeSet = ME_PTCGO_CODES.has((c.setCode || "").toLowerCase());
     const isStandardCdn = cachedUrl.indexOf(IMG_CDN + "/") === 0;
-    if (!(isMeSet && isStandardCdn)) return cachedUrl;
+    if (!(ME_CDN_MISSING.has(code) && isStandardCdn)) return cachedUrl;
   }
-  // 2. Known-bad (already tried API and failed).
-  if (imgCache[key] === "NULL") return null;
 
-  // 3. Direct CDN URL (fast).
+  // 2. Direct CDN URL (fast). Checked before honoring a cached "NULL" so a
+  //    stale "known bad" entry (from before a set appeared on the CDN) can be
+  //    replaced once the set actually has a valid direct URL.
   const setMap = await getSetMap();
   const direct = directImageUrl(c, setMap);
   if (direct) {
     putImgCache(key, direct);
     return direct;
   }
+
+  // 3. Known-bad (already tried API and failed).
+  if (imgCache[key] === "NULL") return null;
 
   // 4. Slow API fallback (only for cards we could not map directly).
   const url = await findImageViaApi(c);
