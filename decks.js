@@ -24,6 +24,11 @@ const reloadImagesBtn = $("#reload-images-btn");
 let decks = [];
 let current = null; // the open deck
 
+// Guarantees only the most recent deck's image render is applied to the DOM.
+// If the user switches decks while images are still loading, an older async
+// render that finishes later must not overwrite the current deck's display.
+let renderToken = 0;
+
 // Rendered image HTML cached per deck name, so switching back to a deck you
 // already opened is instant instead of re-loading every image.
 const imagesHtmlCache = {};
@@ -155,6 +160,11 @@ function renderDetailList() {
 }
 
 async function renderDetailImages() {
+  // Claim this render; if a newer one starts while images are loading, this
+  // one must not overwrite the display when it finishes.
+  const token = ++renderToken;
+  const deckName = current.name;
+
   // Clear any previous deck's images immediately and show a loading state so
   // stale cards from the last deck never show while this one is loading.
   detailImages.innerHTML = '<div class="loading">Loading card images&hellip;</div>';
@@ -169,11 +179,14 @@ async function renderDetailImages() {
   // set) doesn't block the rest, then render them together.
   const ready = await Promise.all(items.map(async (c) => buildMiniCard(c)));
 
+  // Discard the result if the user switched decks while we were loading.
+  if (token !== renderToken || current.name !== deckName) return;
+
   const frag = document.createDocumentFragment();
   for (const mini of ready) frag.appendChild(mini);
   detailImages.innerHTML = "";
   detailImages.appendChild(frag);
-  imagesHtmlCache[current.name] = detailImages.innerHTML;
+  imagesHtmlCache[deckName] = detailImages.innerHTML;
 }
 
 // Build one mini-card. Uses the cached URL when available so switching decks
