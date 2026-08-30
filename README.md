@@ -38,9 +38,10 @@ For a card the deck needs `N` copies of:
 - `index.html` — the tracker page structure
 - `decks.html` — the My Decks page structure
 - `styles.css` — styling and print layout
+- `api.js` — shared Pokémon TCG API image resolution (set code mapping + caching)
 - `app.js` — parsing, storage logic, API integration (tracker page)
 - `decks.js` — saved-deck thumbnails, detail view, remove-from-storage (decks page)
 
 ## Note on the API
 
-Card images come from the public Pokémon TCG API (no key needed for basic use). The app resolves each card by name + set code.
+Card images come from the public Pokémon TCG API (no key needed for basic use). Deck list set abbreviations (e.g. `SCR`, `MEG`, `SSP`) are mapped to the API's set IDs via each set's `ptcgoCode`, then the exact card is found by its number. Resolved images are cached in localStorage for 24 hours so repeated viewings are fast and don't hit the API repeatedly.

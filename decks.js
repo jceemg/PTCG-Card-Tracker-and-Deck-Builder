@@ -155,20 +155,7 @@ async function renderDetailImages() {
   detailImages.appendChild(frag);
 }
 
-// Resolve card image from Pokémon TCG API by name + set code.
-async function resolveCardImage(c) {
-  const query = `name:"${c.name}" set.id:${c.setCode.toLowerCase()}`;
-  const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}&pageSize=5`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.data || data.data.length === 0) return null;
-    return data.data[0].images.large || data.data[0].images.small || null;
-  } catch (e) {
-    return null;
-  }
-}
+// ResolveCardImage is defined in api.js (shared).
 
 // ---------- Remove deck cards from storage ----------
 function removeFromStorage() {
