@@ -86,14 +86,22 @@ async function renderGrid() {
   const cards = [];
   for (const deck of decks) {
     const cover = deck.cards.find((c) => c.category !== "energy") || deck.cards[0];
-    const url = cover ? await resolveCardImage(cover) : null;
     const el = document.createElement("div");
     el.className = "deck-card";
     el.dataset.name = deck.name;
-    el.innerHTML = `
-      <div class="deck-thumb">${url ? `<img src="${url}" alt="">` : '<div class="thumb-placeholder">Deck</div>'}</div>
-      <div class="deck-name">${escapeHtml(deck.name)}</div>
-    `;
+    const thumb = document.createElement("div");
+    thumb.className = "deck-thumb";
+    if (cover) {
+      const img = await createCardImg(cover);
+      thumb.appendChild(img);
+    } else {
+      thumb.innerHTML = '<div class="thumb-placeholder">Deck</div>';
+    }
+    const name = document.createElement("div");
+    name.className = "deck-name";
+    name.textContent = deck.name;
+    el.appendChild(thumb);
+    el.appendChild(name);
     cards.push(el);
   }
   decksGrid.innerHTML = "";
@@ -138,12 +146,9 @@ async function renderDetailImages() {
   }
   const frag = document.createDocumentFragment();
   for (const c of Array.from(uniques.values())) {
-    const url = await resolveCardImage(c);
     const card = document.createElement("div");
     card.className = "mini-card";
-    const img = document.createElement("img");
-    if (url) img.src = url;
-    else img.alt = "no image";
+    const img = await createCardImg(c);
     card.appendChild(img);
     const label = document.createElement("div");
     label.className = "label";
@@ -195,13 +200,11 @@ async function buildPrintSheet() {
   let count = 0;
   let failed = 0;
   for (const c of arr) {
-    const url = await resolveCardImage(c);
-    if (url) {
+    const img = await createCardImg(c);
+    if (img.getAttribute("src")) {
       const card = document.createElement("div");
       card.className = "print-card";
-      const img = document.createElement("img");
-      img.src = url;
-      img.alt = c.name;
+      card.appendChild(img);
       const label = document.createElement("div");
       label.className = "label";
       label.textContent = `${c.name} ${c.setCode}`;

@@ -202,17 +202,14 @@ async function buildPrintSheet() {
   let count = 0;
   let failed = 0;
   for (const c of uniques) {
-    const url = await resolveCardImage(c);
-    if (url) {
+    const img = await createCardImg(c);
+    if (img.getAttribute("src")) {
       const card = document.createElement("div");
       card.className = "print-card";
-      const img = document.createElement("img");
-      img.src = url;
-      img.alt = c.name;
+      card.appendChild(img);
       const label = document.createElement("div");
       label.className = "label";
       label.textContent = `${c.name} ${c.setCode}`;
-      card.appendChild(img);
       card.appendChild(label);
       printGrid.appendChild(card);
       count++;
