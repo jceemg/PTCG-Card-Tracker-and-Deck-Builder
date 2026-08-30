@@ -238,6 +238,18 @@ button.primary:hover {
   background: linear-gradient(180deg, var(--accent), var(--accent-strong));
 }
 
+button.primary.green {
+  background: linear-gradient(180deg, #34d399, #059669);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(52, 211, 153, 0.35);
+}
+button.primary.green:hover {
+  filter: brightness(1.06);
+  border-color: transparent;
+  background: linear-gradient(180deg, #34d399, #059669);
+}
+
 button.danger { border-color: rgba(248, 113, 113, 0.4); color: var(--red); }
 button.danger:hover { background: var(--red-bg); }
 
