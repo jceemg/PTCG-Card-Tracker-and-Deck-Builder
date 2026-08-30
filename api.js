@@ -135,6 +135,10 @@ function cardKey(c) {
 function directImageUrl(c, setMap) {
   const id = (c.setCode || "").toLowerCase();
   const apiSet = setMap[id];
+  // Promo "me" sets (me1-me5, me2pt5) are not on the images.pokemontcg.io
+  // CDN; they 404 there and live on scrydex.com instead. Skip the direct URL
+  // so we go straight to the reliable API/scrydex lookup.
+  if ((apiSet || "").toLowerCase().startsWith("me")) return null;
   if (apiSet && c.number) {
     return `${IMG_CDN}/${apiSet}/${c.number}_hires.png`;
   }
@@ -147,7 +151,15 @@ async function resolveCardImage(c) {
   const imgCache = getImgCache();
 
   // 1. Known good cached URL.
-  if (imgCache[key] && imgCache[key] !== "NULL") return imgCache[key];
+  if (imgCache[key] && imgCache[key] !== "NULL") {
+    // Ignore stale CDN URLs for promo "me" sets (they 404; scrydex is correct).
+    const setMap0 = await getSetMap();
+    const id0 = (c.setCode || "").toLowerCase();
+    const apiSet0 = setMap0[id0];
+    const isMeSet = (apiSet0 || "").toLowerCase().startsWith("me");
+    const isStandardCdn = imgCache[key].indexOf(IMG_CDN + "/") === 0;
+    if (!(isMeSet && isStandardCdn)) return imgCache[key];
+  }
   // 2. Known-bad (already tried API and failed).
   if (imgCache[key] === "NULL") return null;
 
