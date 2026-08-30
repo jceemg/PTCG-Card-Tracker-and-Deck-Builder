@@ -96,6 +96,22 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;");
 }
 
+// Pick the card used as a deck's thumbnail. The user can set an explicit
+// coverIndex (index into deck.cards); otherwise fall back to the first
+// non-energy card, or the first card, or null for an empty deck.
+function coverCard(deck) {
+  const cards = deck.cards || [];
+  if (
+    typeof deck.coverIndex === "number" &&
+    Number.isInteger(deck.coverIndex) &&
+    deck.coverIndex >= 0 &&
+    deck.coverIndex < cards.length
+  ) {
+    return cards[deck.coverIndex];
+  }
+  return cards.find((c) => c.category !== "energy") || cards[0] || null;
+}
+
 function setMsg(el, text, type) {
   el.textContent = text;
   el.className = type || "";
@@ -113,7 +129,7 @@ async function renderGrid() {
 
   const cards = [];
   for (const deck of decks) {
-    const cover = deck.cards.find((c) => c.category !== "energy") || deck.cards[0];
+    const cover = coverCard(deck);
     const el = document.createElement("div");
     el.className = "deck-card";
     el.dataset.name = deck.name;
@@ -153,10 +169,10 @@ function renderDetailList() {
   const storage = loadStorage();
   const thead = `
     <thead>
-      <tr><th>Card</th><th>Set</th><th>Count</th><th>In Storage</th><th>To Add</th><th>Status</th></tr>
+      <tr><th>Card</th><th>Set</th><th>Count</th><th>In Storage</th><th>To Add</th><th>Status</th><th>Cover</th></tr>
     </thead>`;
   const tbody = current.cards
-    .map((c) => {
+    .map((c, i) => {
       const owned = storageCount(storage, cardKey(c));
       const toAdd = c.category === "energy" ? 0 : Math.max(0, c.count - owned);
       let tag;
@@ -167,6 +183,10 @@ function renderDetailList() {
       } else {
         tag = '<span class="tag topup">Add ' + toAdd + "</span>";
       }
+      const isCover = coverCard(current) === c;
+      const coverCell = isCover
+        ? '<span class="cover-badge" title="This is the deck thumbnail">&bull; Cover</span>'
+        : '<button class="cover-btn" data-cover="' + i + '">Set cover</button>';
       return `<tr>
         <td>${escapeHtml(c.name)}</td>
         <td>${escapeHtml(c.setCode)}</td>
@@ -174,6 +194,7 @@ function renderDetailList() {
         <td>${owned}</td>
         <td>${toAdd}</td>
         <td>${tag}</td>
+        <td>${coverCell}</td>
       </tr>`;
     })
     .join("");
@@ -376,6 +397,18 @@ deleteDeckBtn.addEventListener("click", () => {
 
 applyStorageBtn.addEventListener("click", applyToStorage);
 removeStorageBtn.addEventListener("click", removeFromStorage);
+
+// Let the user choose which card of a deck becomes its thumbnail.
+detailList.addEventListener("click", (e) => {
+  const btn = e.target.closest(".cover-btn");
+  if (!btn || !current) return;
+  const idx = parseInt(btn.dataset.cover, 10);
+  if (isNaN(idx) || idx < 0 || idx >= current.cards.length) return;
+  current.coverIndex = idx;
+  saveDecks(decks);
+  renderDetailList();
+  renderGrid();
+});
 
 // ---------- Backup & restore ----------
 // Export wraps both storage and decks (the two things this app saves) so a

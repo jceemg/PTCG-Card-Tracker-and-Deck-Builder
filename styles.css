@@ -163,6 +163,19 @@ tbody tr:last-child td { border-bottom: none; }
 .tag.topup { background: var(--amber-bg); color: var(--amber); }
 .tag.energy { background: var(--panel-2); color: var(--muted); }
 
+.cover-btn {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+.cover-btn:hover { border-color: var(--accent); color: var(--accent); }
+.cover-badge { color: var(--green); font-size: 12px; font-weight: 600; white-space: nowrap; }
+
 #result-msg {
   margin-top: 12px;
   padding: 10px 14px;
