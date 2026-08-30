@@ -18,6 +18,10 @@ const deleteDeckBtn = $("#delete-deck-btn");
 const detailMsg = $("#detail-msg");
 const detailList = $("#detail-list");
 const detailImages = $("#detail-images");
+const exportBtn = $("#export-btn");
+const importBtn = $("#import-btn");
+const importFile = $("#import-file");
+const backupMsg = $("#backup-msg");
 
 // ---------- State ----------
 let decks = [];
@@ -353,6 +357,66 @@ deleteDeckBtn.addEventListener("click", () => {
 
 applyStorageBtn.addEventListener("click", applyToStorage);
 removeStorageBtn.addEventListener("click", removeFromStorage);
+
+// ---------- Backup & restore ----------
+// Export wraps both storage and decks (the two things this app saves) so a
+// single file can recreate the whole collection. Includes a version stamp for
+// future-proofing.
+exportBtn.addEventListener("click", () => {
+  const backup = {
+    app: "ptcg-tracker",
+    version: 1,
+    exported: new Date().toISOString(),
+    storage: loadStorage(),
+    decks: loadDecks()
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ptcg-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  setMsg(backupMsg, "Backup downloaded.", "ok");
+});
+
+importBtn.addEventListener("click", () => importFile.click());
+
+importFile.addEventListener("change", async () => {
+  const file = importFile.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (
+      !data ||
+      typeof data !== "object" ||
+      data.app !== "ptcg-tracker" ||
+      !data.storage ||
+      !Array.isArray(data.decks)
+    ) {
+      throw new Error("Not a PTCG Tracker backup file.");
+    }
+    if (!confirm(
+      "Restore will REPLACE your current card storage and decks with the contents of this backup file. Continue?"
+    )) {
+      return;
+    }
+    saveStorage(data.storage);
+    saveDecks(data.decks);
+    // Drop in-memory render caches so re-opened decks show fresh images.
+    for (const key of Object.keys(imagesHtmlCache)) delete imagesHtmlCache[key];
+    closeDeck();
+    await renderGrid();
+    setMsg(backupMsg, "Backup restored. Your cards and decks have been replaced.", "ok");
+  } catch (e) {
+    setMsg(backupMsg, "Could not restore: " + e.message, "err");
+  } finally {
+    importFile.value = "";
+  }
+});
 
 // ---------- Init ----------
 renderGrid();

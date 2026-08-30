@@ -289,5 +289,9 @@ tbody tr:last-child td { border-bottom: none; }
 #detail-msg.ok { color: var(--green); }
 #detail-msg.err { color: var(--red); }
 
+#backup-msg { margin: 10px 0 0; }
+#backup-msg.ok { color: var(--green); }
+#backup-msg.err { color: var(--red); }
+
 .hint a { color: var(--accent); }
 

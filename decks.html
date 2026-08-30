@@ -26,6 +26,18 @@
       <p id="no-decks" class="hint hidden">No decks saved yet. Go to the <a href="index.html">Tracker</a>, paste a deck list, and hit "Save as Deck".</p>
     </section>
 
+    <!-- Backup & restore -->
+    <section class="panel">
+      <h2>Backup</h2>
+      <p class="hint">Your cards and decks are stored in this browser only. Download a backup file, and keep it safe, so you never lose your collection.</p>
+      <div class="controls">
+        <button id="export-btn" class="primary">Download Backup</button>
+        <button id="import-btn">Restore from Backup</button>
+        <input type="file" id="import-file" accept="application/json,.json" class="hidden">
+      </div>
+      <div id="backup-msg"></div>
+    </section>
+
     <!-- Deck detail -->
     <section class="panel hidden" id="detail-panel">
       <div class="detail-head">
