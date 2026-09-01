@@ -194,6 +194,42 @@ textarea:focus {
 }
 .search-bar input[type="search"]::placeholder { color: var(--faint); }
 
+/* ---------- Add card (My Cards page) ---------- */
+.add-card-top { margin: 0 0 12px; }
+.add-card-form {
+  margin: 0 0 16px;
+  padding: 14px;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.add-card-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.add-card-fields input,
+.add-card-fields select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 9px 12px;
+  font-size: 14px;
+  min-width: 120px;
+}
+.add-card-fields input:focus,
+.add-card-fields select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.add-card-fields input::placeholder { color: var(--faint); }
+.add-card-msg { margin-top: 8px; font-size: 13px; }
+.add-card-msg.ok { color: var(--green); }
+.add-card-msg.err { color: var(--red); }
+
 /* ---------- Controls & buttons ---------- */
 .controls {
   margin-top: 16px;

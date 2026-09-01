@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Cards — PTCG Card Tracker</title>
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <header>
@@ -25,12 +25,30 @@
       <div class="search-bar">
         <input type="search" id="cards-search" placeholder="Search your cards&hellip;" autocomplete="off">
       </div>
+      <div class="add-card-top">
+        <button id="add-card-btn" class="small">+ Add Card</button>
+      </div>
+      <div id="add-card-form" class="hidden add-card-form">
+        <div class="add-card-fields">
+          <input type="text" id="add-card-name" placeholder="Card name" autocomplete="off">
+          <input type="text" id="add-card-set" placeholder="Set (e.g. SVI)" maxlength="4" autocomplete="off">
+          <input type="text" id="add-card-number" placeholder="Number" autocomplete="off">
+          <select id="add-card-category">
+            <option value="">Auto-detect</option>
+            <option value="pokemon">Pokemon</option>
+            <option value="trainer">Trainer</option>
+            <option value="energy">Energy</option>
+          </select>
+          <button id="add-card-submit" class="primary green">Add</button>
+        </div>
+        <div id="add-card-msg" class="add-card-msg"></div>
+      </div>
       <div id="cards-grid" class="card-imgs"></div>
       <p id="no-cards" class="hint hidden">Nothing here yet. Head over to the <a href="index.html">Tracker</a>, paste a deck list, and apply it to your card storage to start building your collection.</p>
     </section>
   </main>
 
   <script src="api.js?v=1"></script>
-  <script src="cards.js"></script>
+  <script src="cards.js?v=1"></script>
 </body>
 </html>

@@ -11,6 +11,16 @@ const cardsSearch = $("#cards-search");
 
 let cardsQuery = "";
 
+// ---------- Add card form ----------
+const addCardBtn = $("#add-card-btn");
+const addCardForm = $("#add-card-form");
+const addCardName = $("#add-card-name");
+const addCardSet = $("#add-card-set");
+const addCardNumber = $("#add-card-number");
+const addCardCategory = $("#add-card-category");
+const addCardSubmit = $("#add-card-submit");
+const addCardMsg = $("#add-card-msg");
+
 // ---------- Storage ----------
 function loadStorage() {
   try {
@@ -190,6 +200,49 @@ cardsGrid.addEventListener("click", async (e) => {
 
   await renderCards();
 });
+
+// ---------- Add card form ----------
+if (addCardBtn) {
+  addCardBtn.addEventListener("click", () => {
+    addCardForm.classList.toggle("hidden");
+    if (!addCardForm.classList.contains("hidden")) addCardName.focus();
+  });
+}
+
+function guessCategory(name) {
+  if (/energy/i.test(name)) return "energy";
+  return "pokemon";
+}
+
+if (addCardSubmit) {
+  addCardSubmit.addEventListener("click", () => {
+    const name = addCardName.value.trim();
+    const setCode = addCardSet.value.trim().toUpperCase();
+    const number = addCardNumber.value.trim();
+
+    if (!name || !setCode || !number) {
+      addCardMsg.textContent = "Fill in all three fields.";
+      addCardMsg.className = "err";
+      return;
+    }
+
+    const storage = loadStorage();
+    const key = `${name}|${setCode}|${number}`;
+    const existing = storageEntry(storage[key]);
+    const category =
+      addCardCategory.value || existing.category || guessCategory(name);
+    storage[key] = { count: existing.count + 1, category };
+    saveStorage(storage);
+
+    addCardName.value = "";
+    addCardSet.value = "";
+    addCardNumber.value = "";
+    addCardCategory.value = "";
+    addCardMsg.textContent = "Added!";
+    addCardMsg.className = "ok";
+    renderCards();
+  });
+}
 
 // ---------- Init ----------
 renderCards();
