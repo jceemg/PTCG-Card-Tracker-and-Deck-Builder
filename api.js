@@ -354,7 +354,7 @@ async function createCardImg(c, alt) {
     const target = e.target;
     if (target.tagName !== "IMG") return;
     if (target.closest(".lightbox")) return;
-    const container = target.closest(".owned-card, .mini-card, .deck-thumb");
+    const container = target.closest(".owned-card, .mini-card");
     if (!container) return;
     if (target.src) {
       e.preventDefault();
