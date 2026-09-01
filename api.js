@@ -315,3 +315,50 @@ async function createCardImg(c, alt) {
 
   return img;
 }
+
+// ---- Lightbox: click any card image to view full-size ----
+(function initLightbox() {
+  const overlay = document.createElement("div");
+  overlay.className = "lightbox";
+  overlay.innerHTML =
+    '<button class="lightbox-close" aria-label="Close">&times;</button>' +
+    '<img class="lightbox-img" alt="Full-size card">';
+  document.body.appendChild(overlay);
+
+  const img = overlay.querySelector(".lightbox-img");
+  const closeBtn = overlay.querySelector(".lightbox-close");
+
+  function open(src, alt) {
+    img.src = src;
+    img.alt = alt || "";
+    overlay.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function close() {
+    overlay.classList.remove("open");
+    img.src = "";
+    document.body.style.overflow = "";
+  }
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target !== overlay) return;
+    close();
+  });
+  closeBtn.addEventListener("click", close);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && overlay.classList.contains("open")) close();
+  });
+  img.addEventListener("click", (e) => e.stopPropagation());
+
+  document.addEventListener("click", (e) => {
+    const target = e.target;
+    if (target.tagName !== "IMG") return;
+    if (target.closest(".lightbox")) return;
+    const container = target.closest(".owned-card, .mini-card, .deck-thumb");
+    if (!container) return;
+    if (target.src) {
+      e.preventDefault();
+      open(target.src, target.alt);
+    }
+  });
+})();
