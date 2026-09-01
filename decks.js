@@ -451,7 +451,7 @@ importFile.addEventListener("change", async () => {
       !data.storage ||
       !Array.isArray(data.decks)
     ) {
-      throw new Error("Not a PTCG Tracker backup file.");
+      throw new Error("Not a PTCG Collection & Deck Builder backup file.");
     }
     if (!confirm(
       "Restore will REPLACE your current card storage and decks with the contents of this backup file. Continue?"

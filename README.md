@@ -1,4 +1,4 @@
-# PTCG Card Tracker & Deck Builder
+# PTCG Collection & Deck Builder
 
 A card collection tracker. Paste your deck list and the app checks your card storage: if you don't have enough copies of a card yet, it adds them; if you already do, it tells you — so you always know which cards you still need.
 
