@@ -68,7 +68,7 @@ async function renderCards() {
   if (keys.length === 0) {
     cardsGrid.innerHTML = "";
     noCards.classList.remove("hidden");
-    noCards.textContent = "No cards yet. Paste a deck list on the Tracker and apply it to your card storage.";
+    noCards.textContent = "No cards yet. Paste a deck list on the Deck Builder and apply it to your card storage.";
     return;
   }
   noCards.classList.add("hidden");

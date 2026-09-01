@@ -34,11 +34,11 @@ For a card the deck needs `N` copies of:
 
 ## Files
 
-- `index.html` — the tracker page structure
+- `index.html` — the Deck Builder page structure
 - `decks.html` — the My Decks page structure
 - `styles.css` — styling
 - `api.js` — shared Pokémon TCG API image resolution (set code mapping + caching)
-- `app.js` — parsing, storage logic, API integration (tracker page)
+- `app.js` — parsing, storage logic, API integration (Deck Builder page)
 - `decks.js` — saved-deck thumbnails, detail view, remove-from-storage (decks page)
 
 ## Note on the API
