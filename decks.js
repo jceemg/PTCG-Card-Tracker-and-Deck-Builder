@@ -69,14 +69,13 @@ function setStorageEntry(storage, key, count, category) {
   storage[key] = { count, category: category || null };
 }
 
-// Sum owned copies across all sets for the same card name + number.
+// Sum owned copies across all sets for the same card name.
 function ownedTotal(storage, name, number) {
-  const id = `${(name || "").toLowerCase()}|${number || ""}`;
+  const id = (name || "").toLowerCase();
   let total = 0;
   for (const [key, val] of Object.entries(storage)) {
     const parts = key.split("|");
-    const keyId = `${(parts[0] || "").toLowerCase()}|${parts[2] || ""}`;
-    if (keyId === id) total += storageEntry(val).count;
+    if ((parts[0] || "").toLowerCase() === id) total += storageEntry(val).count;
   }
   return total;
 }
@@ -309,22 +308,21 @@ function removeFromStorage() {
   if (!current) return;
   const storage = loadStorage();
 
-  // Sum deck needs by name+number identity.
+  // Sum deck needs by card name.
   const deckNeeds = new Map();
   for (const c of current.cards) {
-    const id = `${c.name.toLowerCase()}|${c.number}`;
+    const id = c.name.toLowerCase();
     deckNeeds.set(id, (deckNeeds.get(id) || 0) + c.count);
   }
 
   let removed = 0;
   for (const [id, needed] of deckNeeds) {
     let remaining = needed;
-    // Subtract from every storage entry matching this name+number.
+    // Subtract from every storage entry matching this card name.
     for (const [key, val] of Object.entries(storage)) {
       if (remaining <= 0) break;
       const parts = key.split("|");
-      const keyId = `${(parts[0] || "").toLowerCase()}|${parts[2] || ""}`;
-      if (keyId !== id) continue;
+      if ((parts[0] || "").toLowerCase() !== id) continue;
       const entry = storageEntry(val);
       const take = Math.min(entry.count, remaining);
       if (take >= entry.count) delete storage[key];

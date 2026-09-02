@@ -58,16 +58,15 @@ function setStorageEntry(storage, key, count, category) {
   storage[key] = { count, category: category || null };
 }
 
-// Sum owned copies across all sets for the same card name + number.
-// This lets cards from different sets (e.g. Fezandipiti ex ASC 72 and
-// Fezandipiti ex SFA 72) count together toward a deck's requirement.
+// Sum owned copies across all sets for the same card name.
+// Cards reprinted in different sets have different collector numbers but are
+// the same card — matching by name alone lets them count together.
 function ownedTotal(storage, name, number) {
-  const id = `${(name || "").toLowerCase()}|${number || ""}`;
+  const id = (name || "").toLowerCase();
   let total = 0;
   for (const [key, val] of Object.entries(storage)) {
     const parts = key.split("|");
-    const keyId = `${(parts[0] || "").toLowerCase()}|${parts[2] || ""}`;
-    if (keyId === id) total += storageEntry(val).count;
+    if ((parts[0] || "").toLowerCase() === id) total += storageEntry(val).count;
   }
   return total;
 }
@@ -134,11 +133,11 @@ function parseDeckList(text) {
     cards.push({ name, setCode, number, count, category });
   }
 
-  // Merge entries with the same name + number from different sets so the
+  // Merge entries with the same card name from different sets so the
   // deck treats them as copies of one card rather than separate cards.
   const merged = new Map();
   for (const card of cards) {
-    const id = `${card.name.toLowerCase()}|${card.number}`;
+    const id = card.name.toLowerCase();
     if (merged.has(id)) {
       merged.get(id).count += card.count;
     } else {
