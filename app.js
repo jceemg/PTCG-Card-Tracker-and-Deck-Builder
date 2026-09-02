@@ -58,6 +58,20 @@ function setStorageEntry(storage, key, count, category) {
   storage[key] = { count, category: category || null };
 }
 
+// Sum owned copies across all sets for the same card name + number.
+// This lets cards from different sets (e.g. Fezandipiti ex ASC 72 and
+// Fezandipiti ex SFA 72) count together toward a deck's requirement.
+function ownedTotal(storage, name, number) {
+  const id = `${(name || "").toLowerCase()}|${number || ""}`;
+  let total = 0;
+  for (const [key, val] of Object.entries(storage)) {
+    const parts = key.split("|");
+    const keyId = `${(parts[0] || "").toLowerCase()}|${parts[2] || ""}`;
+    if (keyId === id) total += storageEntry(val).count;
+  }
+  return total;
+}
+
 // ---------- Saved decks (localStorage) ----------
 function loadDecks() {
   try {
@@ -120,7 +134,18 @@ function parseDeckList(text) {
     cards.push({ name, setCode, number, count, category });
   }
 
-  return cards;
+  // Merge entries with the same name + number from different sets so the
+  // deck treats them as copies of one card rather than separate cards.
+  const merged = new Map();
+  for (const card of cards) {
+    const id = `${card.name.toLowerCase()}|${card.number}`;
+    if (merged.has(id)) {
+      merged.get(id).count += card.count;
+    } else {
+      merged.set(id, { ...card });
+    }
+  }
+  return Array.from(merged.values());
 }
 
 // ---------- Card identity helpers ----------
@@ -133,7 +158,7 @@ function renderTargets() {
   const storage = loadStorage();
   const rows = parsedCards.map((c) => {
     const key = cardKey(c);
-    const owned = storageCount(storage, key);
+    const owned = ownedTotal(storage, c.name, c.number);
     return { card: c, owned, key };
   });
 
@@ -183,9 +208,11 @@ function escapeHtml(str) {
 function applyToStorage() {
   const storage = loadStorage();
   const exclude = excludeEnergy.checked;
+  // Use ownedTotal for the "already have" check so cards from different sets
+  // with the same name+number count together.
   const rows = parsedCards.map((c) => {
     const key = cardKey(c);
-    return { card: c, key, owned: storageCount(storage, key) };
+    return { card: c, key, total: ownedTotal(storage, c.name, c.number) };
   });
 
   let added = 0;
@@ -199,20 +226,23 @@ function applyToStorage() {
         energies++;
         continue;
       }
-      const toAdd = Math.max(0, c.count - r.owned);
+      const toAdd = Math.max(0, c.count - r.total);
       if (toAdd === 0) {
         already++;
       } else {
-        setStorageEntry(storage, r.key, r.owned + toAdd, "energy");
+        // Write to the deck's specific set entry.
+        const specific = storageCount(storage, r.key);
+        setStorageEntry(storage, r.key, specific + toAdd, "energy");
         added += toAdd;
       }
       continue;
     }
-    const toAdd = Math.max(0, c.count - r.owned);
+    const toAdd = Math.max(0, c.count - r.total);
     if (toAdd === 0) {
       already++;
     } else {
-      setStorageEntry(storage, r.key, r.owned + toAdd, c.category);
+      const specific = storageCount(storage, r.key);
+      setStorageEntry(storage, r.key, specific + toAdd, c.category);
       added += toAdd;
     }
   }

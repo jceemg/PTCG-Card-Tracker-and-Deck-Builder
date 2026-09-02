@@ -69,6 +69,18 @@ function setStorageEntry(storage, key, count, category) {
   storage[key] = { count, category: category || null };
 }
 
+// Sum owned copies across all sets for the same card name + number.
+function ownedTotal(storage, name, number) {
+  const id = `${(name || "").toLowerCase()}|${number || ""}`;
+  let total = 0;
+  for (const [key, val] of Object.entries(storage)) {
+    const parts = key.split("|");
+    const keyId = `${(parts[0] || "").toLowerCase()}|${parts[2] || ""}`;
+    if (keyId === id) total += storageEntry(val).count;
+  }
+  return total;
+}
+
 function loadDecks() {
   try {
     const raw = localStorage.getItem(DECKS_KEY);
@@ -173,7 +185,7 @@ function renderDetailList() {
     </thead>`;
   const tbody = current.cards
     .map((c, i) => {
-      const owned = storageCount(storage, cardKey(c));
+      const owned = ownedTotal(storage, c.name, c.number);
       const toAdd = c.category === "energy" ? 0 : Math.max(0, c.count - owned);
       let tag;
       if (c.category === "energy") {
@@ -292,23 +304,36 @@ async function buildMiniCard(c, deckName) {
 // ResolveCardImage is defined in api.js (shared).
 
 // ---------- Remove deck cards from storage ----------
+// Removes across all sets that share the same name + number.
 function removeFromStorage() {
   if (!current) return;
   const storage = loadStorage();
-  const counts = new Map();
+
+  // Sum deck needs by name+number identity.
+  const deckNeeds = new Map();
   for (const c of current.cards) {
-    const k = cardKey(c);
-    counts.set(k, (counts.get(k) || 0) + c.count);
+    const id = `${c.name.toLowerCase()}|${c.number}`;
+    deckNeeds.set(id, (deckNeeds.get(id) || 0) + c.count);
   }
+
   let removed = 0;
-  for (const [k, amount] of counts) {
-    const entry = storageEntry(storage[k]);
-    const cur = entry.count;
-    const next = cur - amount;
-    if (next <= 0) delete storage[k];
-    else setStorageEntry(storage, k, next, entry.category);
-    removed += Math.min(cur, amount);
+  for (const [id, needed] of deckNeeds) {
+    let remaining = needed;
+    // Subtract from every storage entry matching this name+number.
+    for (const [key, val] of Object.entries(storage)) {
+      if (remaining <= 0) break;
+      const parts = key.split("|");
+      const keyId = `${(parts[0] || "").toLowerCase()}|${parts[2] || ""}`;
+      if (keyId !== id) continue;
+      const entry = storageEntry(val);
+      const take = Math.min(entry.count, remaining);
+      if (take >= entry.count) delete storage[key];
+      else storage[key] = { count: entry.count - take, category: entry.category };
+      remaining -= take;
+      removed += take;
+    }
   }
+
   saveStorage(storage);
   setMsg(detailMsg, `Removed ${removed} card(s) from your card storage.`, "ok");
   renderDetailList();
@@ -326,13 +351,14 @@ function applyToStorage() {
       energies++;
       continue;
     }
-    const k = cardKey(c);
-    const owned = storageCount(storage, k);
-    const toAdd = Math.max(0, c.count - owned);
+    const total = ownedTotal(storage, c.name, c.number);
+    const toAdd = Math.max(0, c.count - total);
     if (toAdd === 0) {
       already++;
     } else {
-      setStorageEntry(storage, k, owned + toAdd, c.category);
+      const k = cardKey(c);
+      const specific = storageCount(storage, k);
+      setStorageEntry(storage, k, specific + toAdd, c.category);
       added += toAdd;
     }
   }
